@@ -1,0 +1,95 @@
+[
+  {
+    "document_id": "DOC010",
+    "patient_id": "P006",
+    "visit_id": "VIS-6001",
+    "document_type": "Cardiology Consultation & Lab Report",
+    "date": "2026-08-01",
+    "ocr": "Cardiology visit for hyperlipidemia. Lipid panel results: Total Cholesterol 240 mg/dL, LDL 160 mg/dL. Prescribed Atorvastatin 20 mg daily.",
+    "medications": [
+      {
+        "medication": "Atorvastatin",
+        "dosage": "20 mg",
+        "frequency": "daily",
+        "confidence": 0.96
+      }
+    ],
+    "diagnoses": [
+      "Hyperlipidemia"
+    ],
+    "lab_results": [
+      {
+        "lab_test": "Total Cholesterol",
+        "value": "240 mg/dL",
+        "confidence": 0.95
+      },
+      {
+        "lab_test": "LDL",
+        "value": "160 mg/dL",
+        "confidence": 0.94
+      }
+    ],
+    "procedures": [
+      "ECG Evaluation"
+    ],
+    "allergies": [],
+    "needs_review": false,
+    "confidence": 95.0
+  },
+  {
+    "document_id": "DOC011",
+    "patient_id": "P006",
+    "visit_id": "VIS-6002",
+    "document_type": "Follow-up Cardiology Note",
+    "date": "2026-08-10",
+    "ocr": "Follow up visit for P006. Increased Atorvastatin dosage to 40 mg daily for lipid management.",
+    "medications": [
+      {
+        "medication": "Atorvastatin",
+        "dosage": "40 mg",
+        "frequency": "daily",
+        "confidence": 0.93
+      }
+    ],
+    "diagnoses": [
+      "Hyperlipidemia",
+      "Essential Hypertension"
+    ],
+    "lab_results": [],
+    "procedures": [],
+    "allergies": [],
+    "needs_review": false,
+    "confidence": 93.0
+  },
+  {
+    "document_id": "DOC012",
+    "patient_id": "P007",
+    "visit_id": "VIS-7001",
+    "document_type": "Pulmonology Note",
+    "date": "2026-06-15",
+    "ocr": "Patient P007 presents with mild asthma exacerbation. Prescribed Albuterol Inhaler 90 mcg as needed. Recorded Allergy: Aspirin.",
+    "medications": [
+      {
+        "medication": "Albuterol Inhaler",
+        "dosage": "90 mcg",
+        "frequency": "as needed",
+        "confidence": 0.97
+      }
+    ],
+    "diagnoses": [
+      "Asthma"
+    ],
+    "lab_results": [],
+    "procedures": [
+      "Spirometry"
+    ],
+    "allergies": [
+      {
+        "allergen": "Aspirin",
+        "reaction": "Bronchospasm"
+      }
+    ],
+    "needs_review": false,
+    "confidence": 97.0
+  }
+]

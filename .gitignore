@@ -1,0 +1,27 @@
+Set-Content -Path .gitignore -Value @"
+# Virtual Environment (DO NOT UPLOAD)
+venv/
+.venv/
+env/
+
+# Python Caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Local Vector Database & Storage Caches
+.qdrant/
+*.sqlite
+*.db
+
+# Environment Keys
+.env
+.env.local
+
+# IDE Files
+.vscode/
+.idea/
+.DS_Store
+"@

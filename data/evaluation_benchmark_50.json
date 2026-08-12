@@ -1,0 +1,402 @@
+[
+  {
+    "id": "Q01",
+    "category": "SIMPLE_LAB_LOOKUP",
+    "patient_id": "P001",
+    "query": "What is P001's Fasting Blood Sugar level?",
+    "expected_facts": ["145 mg/dl"],
+    "relevant_doc_ids": ["DOC002"]
+  },
+  {
+    "id": "Q02",
+    "category": "LATEST_LAB",
+    "patient_id": "P001",
+    "query": "What was P001's latest HbA1c test result?",
+    "expected_facts": ["8.1%"],
+    "relevant_doc_ids": ["DOC002"]
+  },
+  {
+    "id": "Q03",
+    "category": "HISTORICAL_LAB_TREND",
+    "patient_id": "P006",
+    "query": "What are P006's cholesterol and lipid lab values?",
+    "expected_facts": ["240 mg/dL", "160 mg/dL"],
+    "relevant_doc_ids": ["DOC010"]
+  },
+  {
+    "id": "Q04",
+    "category": "MEDICATION_LOOKUP",
+    "patient_id": "P001",
+    "query": "What medication was prescribed for P001 in March 2024?",
+    "expected_facts": ["Metformin", "Glimepiride"],
+    "relevant_doc_ids": ["DOC001"]
+  },
+  {
+    "id": "Q05",
+    "category": "MEDICATION_PROGRESSION",
+    "patient_id": "P001",
+    "query": "How has P001's Metformin dosage changed across visits?",
+    "expected_facts": ["500 mg", "1000 mg"],
+    "relevant_doc_ids": ["DOC001", "DOC005"]
+  },
+  {
+    "id": "Q06",
+    "category": "MEDICATION_PROGRESSION",
+    "patient_id": "P006",
+    "query": "How has P006's Atorvastatin dosage changed across cardiology visits?",
+    "expected_facts": ["20 mg", "40 mg"],
+    "relevant_doc_ids": ["DOC010", "DOC011"]
+  },
+  {
+    "id": "Q07",
+    "category": "ALLERGY_LOOKUP",
+    "patient_id": "P003",
+    "query": "Does P003 have a recorded drug allergy?",
+    "expected_facts": ["Penicillin"],
+    "relevant_doc_ids": ["DOC006"]
+  },
+  {
+    "id": "Q08",
+    "category": "ALLERGY_LOOKUP",
+    "patient_id": "P007",
+    "query": "What allergen causes bronchospasm in patient P007?",
+    "expected_facts": ["Aspirin"],
+    "relevant_doc_ids": ["DOC012"]
+  },
+  {
+    "id": "Q09",
+    "category": "DIAGNOSIS_LOOKUP",
+    "patient_id": "P001",
+    "query": "What primary diagnosis is documented for P001?",
+    "expected_facts": ["Type 2 Diabetes Mellitus"],
+    "relevant_doc_ids": ["DOC001", "DOC002", "DOC005"]
+  },
+  {
+    "id": "Q10",
+    "category": "DIAGNOSIS_LOOKUP",
+    "patient_id": "P004",
+    "query": "What condition was P004 treated for in February 2026?",
+    "expected_facts": ["Bronchitis"],
+    "relevant_doc_ids": ["DOC008"]
+  },
+  {
+    "id": "Q11",
+    "category": "LOW_CONFIDENCE_REVIEW",
+    "patient_id": "P002",
+    "query": "What medication is prescribed in P002's handwritten prescription?",
+    "expected_facts": ["Amlodipine"],
+    "relevant_doc_ids": ["DOC004"]
+  },
+  {
+    "id": "Q12",
+    "category": "UNDATED_NOTE",
+    "patient_id": "P005",
+    "query": "What information is recorded in P005's clinical note?",
+    "expected_facts": ["lifestyle adjustments"],
+    "relevant_doc_ids": ["DOC009"]
+  },
+  {
+    "id": "Q13",
+    "category": "UNANSWERABLE_NEGATIVE",
+    "patient_id": "P001",
+    "query": "What is P001's recorded blood group?",
+    "expected_facts": ["No relevant information"],
+    "relevant_doc_ids": []
+  },
+  {
+    "id": "Q14",
+    "category": "UNANSWERABLE_NEGATIVE",
+    "patient_id": "P003",
+    "query": "What was P003's Fasting Blood Sugar result?",
+    "expected_facts": ["No relevant information"],
+    "relevant_doc_ids": []
+  },
+  {
+    "id": "Q15",
+    "category": "UNANSWERABLE_NEGATIVE",
+    "patient_id": "P007",
+    "query": "What is P007's HbA1c percentage?",
+    "expected_facts": ["No relevant information"],
+    "relevant_doc_ids": []
+  },
+  {
+    "id": "Q16",
+    "category": "SIMPLE_LAB_LOOKUP",
+    "patient_id": "P006",
+    "query": "What is P006's Total Cholesterol level?",
+    "expected_facts": ["240 mg/dL"],
+    "relevant_doc_ids": ["DOC010"]
+  },
+  {
+    "id": "Q17",
+    "category": "SIMPLE_LAB_LOOKUP",
+    "patient_id": "P006",
+    "query": "What is P006's LDL cholesterol value?",
+    "expected_facts": ["160 mg/dL"],
+    "relevant_doc_ids": ["DOC010"]
+  },
+  {
+    "id": "Q18",
+    "category": "MEDICATION_LOOKUP",
+    "patient_id": "P004",
+    "query": "What medication was prescribed to P004 for cough?",
+    "expected_facts": ["Amoxicillin"],
+    "relevant_doc_ids": ["DOC008"]
+  },
+  {
+    "id": "Q19",
+    "category": "MEDICATION_LOOKUP",
+    "patient_id": "P007",
+    "query": "What inhaler medication is prescribed for P007?",
+    "expected_facts": ["Albuterol Inhaler"],
+    "relevant_doc_ids": ["DOC012"]
+  },
+  {
+    "id": "Q20",
+    "category": "DIAGNOSIS_LOOKUP",
+    "patient_id": "P006",
+    "query": "What cardiac diagnoses are listed for P006?",
+    "expected_facts": ["Hyperlipidemia"],
+    "relevant_doc_ids": ["DOC010", "DOC011"]
+  },
+  {
+    "id": "Q21",
+    "category": "SYNONYM_QUERY",
+    "patient_id": "P001",
+    "query": "Show glycated hemoglobin concentration for P001.",
+    "expected_facts": ["8.1%"],
+    "relevant_doc_ids": ["DOC002"]
+  },
+  {
+    "id": "Q22",
+    "category": "SYNONYM_QUERY",
+    "patient_id": "P006",
+    "query": "What is P006's bad cholesterol measurement?",
+    "expected_facts": ["160 mg/dL"],
+    "relevant_doc_ids": ["DOC010"]
+  },
+  {
+    "id": "Q23",
+    "category": "SYNONYM_QUERY",
+    "patient_id": "P007",
+    "query": "Does P007 have respiratory reactive airway disease?",
+    "expected_facts": ["Asthma"],
+    "relevant_doc_ids": ["DOC012"]
+  },
+  {
+    "id": "Q24",
+    "category": "MULTIPLE_VISIT",
+    "patient_id": "P001",
+    "query": "Summarize P001's complete medical history across all visits.",
+    "expected_facts": ["Metformin", "HbA1c", "8.1%"],
+    "relevant_doc_ids": ["DOC001", "DOC002", "DOC005"]
+  },
+  {
+    "id": "Q25",
+    "category": "MULTIPLE_VISIT",
+    "patient_id": "P006",
+    "query": "Summarize P006's cardiology evaluations across visits.",
+    "expected_facts": ["Atorvastatin", "Total Cholesterol"],
+    "relevant_doc_ids": ["DOC010", "DOC011"]
+  },
+  {
+    "id": "Q26",
+    "category": "DOSAGE_CONSISTENCY",
+    "patient_id": "P001",
+    "query": "Are there any medication dosage discrepancies for P001?",
+    "expected_facts": ["Metformin", "500 mg", "1000 mg"],
+    "relevant_doc_ids": ["DOC001", "DOC005"]
+  },
+  {
+    "id": "Q27",
+    "category": "DOSAGE_CONSISTENCY",
+    "patient_id": "P006",
+    "query": "Was P006's lipid medication dosage modified?",
+    "expected_facts": ["Atorvastatin", "20 mg", "40 mg"],
+    "relevant_doc_ids": ["DOC010", "DOC011"]
+  },
+  {
+    "id": "Q28",
+    "category": "MEDICATION_LOOKUP",
+    "patient_id": "P001",
+    "query": "What dose of Glimepiride was prescribed to P001?",
+    "expected_facts": ["2 mg"],
+    "relevant_doc_ids": ["DOC001"]
+  },
+  {
+    "id": "Q29",
+    "category": "PROCEDURE_LOOKUP",
+    "patient_id": "P006",
+    "query": "What diagnostic procedures were performed on P006?",
+    "expected_facts": ["ECG Evaluation"],
+    "relevant_doc_ids": ["DOC010"]
+  },
+  {
+    "id": "Q30",
+    "category": "PROCEDURE_LOOKUP",
+    "patient_id": "P007",
+    "query": "What pulmonary procedure was conducted for P007?",
+    "expected_facts": ["Spirometry"],
+    "relevant_doc_ids": ["DOC012"]
+  },
+  {
+    "id": "Q31",
+    "category": "UNANSWERABLE_NEGATIVE",
+    "patient_id": "P002",
+    "query": "What was P002's ECG result?",
+    "expected_facts": ["No relevant information"],
+    "relevant_doc_ids": []
+  },
+  {
+    "id": "Q32",
+    "category": "UNANSWERABLE_NEGATIVE",
+    "patient_id": "P004",
+    "query": "Does P004 have an allergy to Penicillin?",
+    "expected_facts": ["No allergy information"],
+    "relevant_doc_ids": []
+  },
+  {
+    "id": "Q33",
+    "category": "UNANSWERABLE_NEGATIVE",
+    "patient_id": "P005",
+    "query": "What is P005's Metformin dosage?",
+    "expected_facts": ["No relevant information"],
+    "relevant_doc_ids": []
+  },
+  {
+    "id": "Q34",
+    "category": "SIMPLE_LAB_LOOKUP",
+    "patient_id": "P001",
+    "query": "Check P001's Fasting Glucose.",
+    "expected_facts": ["145 mg/dl"],
+    "relevant_doc_ids": ["DOC002"]
+  },
+  {
+    "id": "Q35",
+    "category": "LATEST_LAB",
+    "patient_id": "P006",
+    "query": "What is P006's latest LDL reading?",
+    "expected_facts": ["160 mg/dL"],
+    "relevant_doc_ids": ["DOC010"]
+  },
+  {
+    "id": "Q36",
+    "category": "MEDICATION_LOOKUP",
+    "patient_id": "P002",
+    "query": "What blood pressure med does P002 take?",
+    "expected_facts": ["Amlodipine"],
+    "relevant_doc_ids": ["DOC004"]
+  },
+  {
+    "id": "Q37",
+    "category": "ALLERGY_LOOKUP",
+    "patient_id": "P003",
+    "query": "Is P003 allergic to Penicillin?",
+    "expected_facts": ["Penicillin"],
+    "relevant_doc_ids": ["DOC006"]
+  },
+  {
+    "id": "Q38",
+    "category": "ALLERGY_LOOKUP",
+    "patient_id": "P007",
+    "query": "Is P007 allergic to Aspirin?",
+    "expected_facts": ["Aspirin"],
+    "relevant_doc_ids": ["DOC012"]
+  },
+  {
+    "id": "Q39",
+    "category": "DIAGNOSIS_LOOKUP",
+    "patient_id": "P003",
+    "query": "What condition was P003 admitted for?",
+    "expected_facts": ["Bacterial Infection"],
+    "relevant_doc_ids": ["DOC006"]
+  },
+  {
+    "id": "Q40",
+    "category": "DIAGNOSIS_LOOKUP",
+    "patient_id": "P007",
+    "query": "What respiratory diagnosis is documented for P007?",
+    "expected_facts": ["Asthma"],
+    "relevant_doc_ids": ["DOC012"]
+  },
+  {
+    "id": "Q41",
+    "category": "MEDICATION_PROGRESSION",
+    "patient_id": "P001",
+    "query": "Track P001's diabetes medication dosing over time.",
+    "expected_facts": ["500 mg", "1000 mg"],
+    "relevant_doc_ids": ["DOC001", "DOC005"]
+  },
+  {
+    "id": "Q42",
+    "category": "MEDICATION_PROGRESSION",
+    "patient_id": "P006",
+    "query": "Track P006's cholesterol medication changes.",
+    "expected_facts": ["20 mg", "40 mg"],
+    "relevant_doc_ids": ["DOC010", "DOC011"]
+  },
+  {
+    "id": "Q43",
+    "category": "LOW_CONFIDENCE_REVIEW",
+    "patient_id": "P002",
+    "query": "Does P002's record require human review?",
+    "expected_facts": ["Amlodipine"],
+    "relevant_doc_ids": ["DOC004"]
+  },
+  {
+    "id": "Q44",
+    "category": "UNDATED_NOTE",
+    "patient_id": "P005",
+    "query": "Does P005 have undated notes flagged for review?",
+    "expected_facts": ["lifestyle adjustments"],
+    "relevant_doc_ids": ["DOC009"]
+  },
+  {
+    "id": "Q45",
+    "category": "UNANSWERABLE_NEGATIVE",
+    "patient_id": "P006",
+    "query": "What is P006's Fasting Blood Sugar?",
+    "expected_facts": ["No relevant information"],
+    "relevant_doc_ids": []
+  },
+  {
+    "id": "Q46",
+    "category": "UNANSWERABLE_NEGATIVE",
+    "patient_id": "P007",
+    "query": "What is P007's Total Cholesterol?",
+    "expected_facts": ["No relevant information"],
+    "relevant_doc_ids": []
+  },
+  {
+    "id": "Q47",
+    "category": "SYNONYM_QUERY",
+    "patient_id": "P001",
+    "query": "What is P001's A1c percentage?",
+    "expected_facts": ["8.1%"],
+    "relevant_doc_ids": ["DOC002"]
+  },
+  {
+    "id": "Q48",
+    "category": "SYNONYM_QUERY",
+    "patient_id": "P006",
+    "query": "What statin drug does P006 take?",
+    "expected_facts": ["Atorvastatin"],
+    "relevant_doc_ids": ["DOC010", "DOC011"]
+  },
+  {
+    "id": "Q49",
+    "category": "MULTIPLE_VISIT",
+    "patient_id": "P001",
+    "query": "List all visit dates for P001.",
+    "expected_facts": ["2024-03-10", "2026-07-15", "2026-07-20"],
+    "relevant_doc_ids": ["DOC001", "DOC002", "DOC005"]
+  },
+  {
+    "id": "Q50",
+    "category": "MULTIPLE_VISIT",
+    "patient_id": "P006",
+    "query": "List all visit dates for P006.",
+    "expected_facts": ["2026-08-01", "2026-08-10"],
+    "relevant_doc_ids": ["DOC010", "DOC011"]
+  }
+]

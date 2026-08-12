@@ -1,0 +1,289 @@
+[
+  {
+    "patient_id": "P001",
+    "document_id": "DOC001",
+    "visit_id": "V001",
+    "document_type": "prescription",
+    "date": "2026-07-14",
+    "ocr": {
+      "text": "Dr. Vance\nDiagnosis: Type 2 Diabetes\nRx:\nMetformin 500mg twice daily\nGlimepiride 2mg once daily",
+      "confidence": 0.96
+    },
+    "medications": [
+      {
+        "name": "Metformin",
+        "dosage": "500 mg",
+        "frequency": "twice daily",
+        "confidence": 0.98
+      },
+      {
+        "name": "Glimepiride",
+        "dosage": "2 mg",
+        "frequency": "once daily",
+        "confidence": 0.97
+      }
+    ],
+    "diagnoses": [
+      {
+        "condition": "Type 2 Diabetes",
+        "confidence": 0.99
+      }
+    ],
+    "lab_results": [],
+    "procedures": [],
+    "allergies": [],
+    "needs_review": false
+  },
+  {
+    "patient_id": "P001",
+    "document_id": "DOC002",
+    "visit_id": "V002",
+    "document_type": "lab_report",
+    "date": "2026-07-15",
+    "ocr": {
+      "text": "City Lab\nHbA1c: 8.1 %\nFasting Blood Sugar: 145 mg/dl",
+      "confidence": 0.94
+    },
+    "medications": [],
+    "diagnoses": [],
+    "lab_results": [
+      {
+        "test": "HbA1c",
+        "value": 8.1,
+        "unit": "%",
+        "date": "2026-07-15",
+        "confidence": 0.95
+      },
+      {
+        "test": "Fasting Blood Sugar",
+        "value": 145,
+        "unit": "mg/dl",
+        "date": "2026-07-15",
+        "confidence": 0.96
+      }
+    ],
+    "procedures": [],
+    "allergies": [],
+    "needs_review": false
+  },
+  {
+    "patient_id": "P002",
+    "document_id": "DOC003",
+    "visit_id": "V003",
+    "document_type": "medical_record",
+    "date": "2026-06-10",
+    "ocr": {
+      "text": "Routine annual checkup. Patient is healthy. No new complaints.",
+      "confidence": 0.92
+    },
+    "medications": [],
+    "diagnoses": [],
+    "lab_results": [],
+    "procedures": [],
+    "allergies": [],
+    "needs_review": false
+  },
+  {
+    "patient_id": "P002",
+    "document_id": "DOC004",
+    "visit_id": "V004",
+    "document_type": "prescription",
+    "date": "2026-08-01",
+    "ocr": {
+      "text": "Rx: Aml..ine 5m? \nHyp..tension",
+      "confidence": 0.58
+    },
+    "medications": [
+      {
+        "name": "Amlodipine",
+        "dosage": "5 mg",
+        "frequency": "As directed",
+        "confidence": 0.6
+      }
+    ],
+    "diagnoses": [
+      {
+        "condition": "Hypertension",
+        "confidence": 0.65
+      }
+    ],
+    "lab_results": [],
+    "procedures": [],
+    "allergies": [],
+    "needs_review": true
+  },
+  {
+    "patient_id": "P001",
+    "document_id": "DOC005",
+    "visit_id": "V005",
+    "document_type": "prescription",
+    "date": "2026-09-01",
+    "ocr": {
+      "text": "Dr. Vance\nDiagnosis: Type 2 Diabetes\nIncrease Metformin dose to 1000mg twice daily.",
+      "confidence": 0.95
+    },
+    "medications": [
+      {
+        "name": "Metformin",
+        "dosage": "1000 mg",
+        "frequency": "twice daily",
+        "confidence": 0.98
+      }
+    ],
+    "diagnoses": [
+      {
+        "condition": "Type 2 Diabetes",
+        "confidence": 0.99
+      }
+    ],
+    "lab_results": [],
+    "procedures": [],
+    "allergies": [],
+    "needs_review": false
+  },
+  {
+    "patient_id": "P003",
+    "document_id": "DOC006",
+    "visit_id": "V006",
+    "document_type": "discharge_summary",
+    "date": "2026-05-15",
+    "ocr": {
+      "text": "Discharge Summary\nDiagnosis: Pneumonia\nMedications on Discharge: Azithromycin 500mg daily for 5 days.\nProcedures: Chest X-Ray\nAllergies: Penicillin",
+      "confidence": 0.97
+    },
+    "medications": [
+      {
+        "name": "Azithromycin",
+        "dosage": "500 mg",
+        "frequency": "daily for 5 days",
+        "confidence": 0.96
+      }
+    ],
+    "diagnoses": [
+      {
+        "condition": "Pneumonia",
+        "confidence": 0.99
+      }
+    ],
+    "lab_results": [],
+    "procedures": [
+      "Chest X-Ray"
+    ],
+    "allergies": [
+      "Penicillin"
+    ],
+    "needs_review": false
+  },
+  {
+    "patient_id": "P003",
+    "document_id": "DOC007",
+    "visit_id": "V007",
+    "document_type": "medical_record",
+    "date": "2026-05-25",
+    "ocr": {
+      "text": "Follow up. Patient doing much better. Breathing normal. No fever.",
+      "confidence": 0.94
+    },
+    "medications": [],
+    "diagnoses": [],
+    "lab_results": [],
+    "procedures": [],
+    "allergies": [],
+    "needs_review": false
+  },
+  {
+    "patient_id": "P004",
+    "document_id": "DOC008",
+    "visit_id": "V008",
+    "document_type": "prescription",
+    "date": "2026-10-10",
+    "ocr": {
+      "text": "Rx: Rosuvastatin 20mg once daily\nDiagnosis: Hyperlipidemia",
+      "confidence": 0.7
+    },
+    "medications": [
+      {
+        "name": "Rosuvastatin",
+        "dosage": "20 mg",
+        "frequency": "once daily",
+        "confidence": 0.72
+      }
+    ],
+    "diagnoses": [
+      {
+        "condition": "Hyperlipidemia",
+        "confidence": 0.85
+      }
+    ],
+    "lab_results": [],
+    "procedures": [],
+    "allergies": [],
+    "needs_review": true
+  },
+  {
+    "patient_id": "P005",
+    "document_id": "DOC009",
+    "visit_id": "VIS-UNKNOWN",
+    "document_type": "medical_record",
+    "date": "1970-01-01",
+    "ocr": {
+      "text": "Undated note. Patient complained of migraine. Advised Paracetamol.",
+      "confidence": 0.9
+    },
+    "medications": [
+      {
+        "name": "Paracetamol",
+        "dosage": "Standard dosage",
+        "frequency": "As directed",
+        "confidence": 0.88
+      }
+    ],
+    "diagnoses": [
+      {
+        "condition": "Migraine",
+        "confidence": 0.9
+      }
+    ],
+    "lab_results": [],
+    "procedures": [],
+    "allergies": [],
+    "needs_review": false
+  },
+  {
+    "patient_id": "P005",
+    "document_id": "DOC010",
+    "visit_id": "V009",
+    "document_type": "medical_record",
+    "date": "2026-11-20",
+    "ocr": {
+      "text": "Visit 2: Blood Pressure: 135/85 mmHg\nDiagnosis: Essential Hypertension\nRx:\nLosartan 50mg daily",
+      "confidence": 0.95
+    },
+    "medications": [
+      {
+        "name": "Losartan",
+        "dosage": "50 mg",
+        "frequency": "daily",
+        "confidence": 0.96
+      }
+    ],
+    "diagnoses": [
+      {
+        "condition": "Essential Hypertension",
+        "confidence": 0.97
+      }
+    ],
+    "lab_results": [
+      {
+        "test": "Blood Pressure",
+        "value": "135/85",
+        "unit": "mmHg",
+        "date": "2026-11-20",
+        "confidence": 0.94
+      }
+    ],
+    "procedures": [],
+    "allergies": [],
+    "needs_review": false
+  }
+]
