@@ -1,0 +1,26 @@
+const en = {
+  dashboard: "Dashboard",
+  medicalRecords: "Medical Records",
+  uploadRecord: "Upload Record",
+  medicalHistory: "Medical History",
+  consentManagement: "Consent Management",
+  accessHistory: "Access History",
+  aiAssistant: "AI Assistant",
+  profile: "Profile",
+  logout: "Logout",
+  login: "Login",
+  register: "Register",
+  patients: "Patients",
+  accessRequests: "Access Requests",
+  settings: "Settings",
+  patientLogin: "Patient Login",
+  doctorLogin: "Doctor Login",
+  patientRegistration: "Patient Registration",
+  heroTitle: "Securely organize, understand, and control access to your digital health records.",
+  features: "Features",
+  howItWorks: "How It Works",
+  privacySecurity: "Privacy & Security",
+  aiUnderstanding: "AI Record Understanding",
+};
+
+export default en;

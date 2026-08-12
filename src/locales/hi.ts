@@ -1,0 +1,26 @@
+const hi = {
+  dashboard: "डैशबोर्ड",
+  medicalRecords: "मेडिकल रिकॉर्ड",
+  uploadRecord: "रिकॉर्ड अपलोड करें",
+  medicalHistory: "मेडिकल इतिहास",
+  consentManagement: "सहमति प्रबंधन",
+  accessHistory: "पहुँच इतिहास",
+  aiAssistant: "एआई सहायक",
+  profile: "प्रोफ़ाइल",
+  logout: "लॉगआउट",
+  login: "लॉगिन",
+  register: "पंजीकरण",
+  patients: "मरीज़",
+  accessRequests: "पहुँच अनुरोध",
+  settings: "सेटिंग्स",
+  patientLogin: "मरीज़ लॉगिन",
+  doctorLogin: "डॉक्टर लॉगिन",
+  patientRegistration: "मरीज़ पंजीकरण",
+  heroTitle: "अपने डिजिटल स्वास्थ्य रिकॉर्ड को सुरक्षित रूप से व्यवस्थित करें, समझें और नियंत्रित करें।",
+  features: "विशेषताएँ",
+  howItWorks: "यह कैसे काम करता है",
+  privacySecurity: "गोपनीयता और सुरक्षा",
+  aiUnderstanding: "एआई रिकॉर्ड समझ",
+};
+
+export default hi;
