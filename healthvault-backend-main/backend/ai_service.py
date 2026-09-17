@@ -148,10 +148,33 @@ def generate_mock_embedding(text: str) -> List[float]:
 def get_embedding(text: str) -> List[float]:
     """
     Returns 1024-dimensional embedding for input text.
-    In production mode, strictly enforces real BAAI/bge-m3 MedicalEmbedder execution.
-    Raises RuntimeError if real BGE-M3 is missing in production to prevent fake indexing.
-    Mock fallback is isolated strictly to test environments.
+    1. Fast Remote Hugging Face Space (if HF_EMBEDDING_URL is configured)
+    2. Local BAAI/bge-m3 MedicalEmbedder execution
+    3. Deterministic fallback in testing mode
     """
+    import requests
+
+    # 1. Hugging Face Spaces Remote Microservice Fast-Path
+    if settings.HF_EMBEDDING_URL:
+        try:
+            headers = {}
+            if settings.HF_API_TOKEN:
+                headers["Authorization"] = f"Bearer {settings.HF_API_TOKEN}"
+            resp = requests.post(
+                settings.HF_EMBEDDING_URL,
+                json={"texts": [text]},
+                headers=headers,
+                timeout=10
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                embeddings = data.get("embeddings", [])
+                if embeddings and len(embeddings[0]) == VECTOR_SIZE:
+                    return embeddings[0]
+        except Exception as e:
+            print(f"[ai_service] Hugging Face Space embedding request failed: {e}. Falling back to local embedder.")
+
+    # 2. Local BGE-M3 Execution
     global _real_embedder
     if _real_embedder is None:
         try:
