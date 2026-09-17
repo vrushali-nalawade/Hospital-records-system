@@ -125,6 +125,7 @@ export async function askAIAboutRecords(
   const sorted = [...records].sort((a, b) =>
     a.createdAt < b.createdAt ? 1 : -1
   );
+  const lower = userQuestion.toLowerCase();
 
   if (lower.includes("blood report") || lower.includes("blood")) {
     const rec = sorted.find((r) => r.recordType === "blood_report");
