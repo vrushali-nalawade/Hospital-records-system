@@ -64,6 +64,16 @@ app.include_router(documents.router)
 app.include_router(consent.router)
 app.include_router(ai.router)
 
+@app.get("/", tags=["root"])
+def root():
+    return {
+        "status": "online",
+        "service": "HealthVault AI Backend",
+        "version": "1.0.0",
+        "health": "/health",
+        "docs": "/docs"
+    }
+
 # Expose global audit history log endpoint
 @app.get("/audit/me", response_model=List[AccessLogResponse], tags=["audit"])
 def get_my_audit_logs(
