@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "https://healthvault-frontend-seven.vercel.app"
     DOCTOR_ALLOWED_EMAIL_DOMAINS: str = "demo.health,hospital.org,healthvault.com,doctor.com"
     FIREBASE_CREDENTIALS_PATH: Optional[str] = None
+    FIREBASE_CREDENTIALS_JSON: Optional[str] = None
     QDRANT_STORAGE_DIR: str = "backend/qdrant_db"
     QDRANT_URL: Optional[str] = None
     QDRANT_API_KEY: Optional[str] = None

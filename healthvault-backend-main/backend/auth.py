@@ -10,25 +10,71 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 
 import os
+import json
+import base64
+import logging
 import firebase_admin
 from firebase_admin import credentials, auth as fb_auth
 
-# Initialize Firebase Admin App if credentials exist or default app not yet initialized
+logger = logging.getLogger("backend")
+
+# Initialize Firebase Admin App if valid credentials exist
 _firebase_initialized = False
 try:
     if not firebase_admin._apps:
-        if settings.FIREBASE_CREDENTIALS_PATH and os.path.exists(settings.FIREBASE_CREDENTIALS_PATH):
-            cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS_PATH)
-            firebase_admin.initialize_app(cred)
-            _firebase_initialized = True
-        elif settings.FIREBASE_PROJECT_ID and settings.FIREBASE_PROJECT_ID != "your-firebase-project-id":
-            # Initialize with default credentials / project ID
-            cred = credentials.ApplicationDefault()
-            firebase_admin.initialize_app(cred, {"projectId": settings.FIREBASE_PROJECT_ID})
+        cred = None
+        # 1. Check direct JSON string in environment (e.g., on Render or production env)
+        if settings.FIREBASE_CREDENTIALS_JSON:
+            try:
+                raw_json = settings.FIREBASE_CREDENTIALS_JSON.strip()
+                if raw_json.startswith("{"):
+                    cred_data = json.loads(raw_json)
+                else:
+                    cred_data = json.loads(base64.b64decode(raw_json).decode("utf-8"))
+                cred = credentials.Certificate(cred_data)
+                logger.info("Firebase initialized via FIREBASE_CREDENTIALS_JSON")
+            except Exception as e:
+                logger.warning(f"Could not parse FIREBASE_CREDENTIALS_JSON: {e}")
+
+        # 2. Check service account JSON file on disk
+        if not cred and settings.FIREBASE_CREDENTIALS_PATH and os.path.exists(settings.FIREBASE_CREDENTIALS_PATH):
+            try:
+                cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS_PATH)
+                logger.info(f"Firebase initialized via {settings.FIREBASE_CREDENTIALS_PATH}")
+            except Exception as e:
+                logger.warning(f"Could not load FIREBASE_CREDENTIALS_PATH: {e}")
+
+        # 3. Check individual env vars
+        if not cred and settings.FIREBASE_CLIENT_EMAIL and settings.FIREBASE_PRIVATE_KEY and "your-private-key" not in settings.FIREBASE_PRIVATE_KEY:
+            try:
+                cred_dict = {
+                    "type": "service_account",
+                    "project_id": settings.FIREBASE_PROJECT_ID,
+                    "private_key": settings.FIREBASE_PRIVATE_KEY.replace('\\n', '\n'),
+                    "client_email": settings.FIREBASE_CLIENT_EMAIL,
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                }
+                cred = credentials.Certificate(cred_dict)
+                logger.info("Firebase initialized via FIREBASE_PRIVATE_KEY / FIREBASE_CLIENT_EMAIL")
+            except Exception as e:
+                logger.warning(f"Could not initialize Firebase via env credentials: {e}")
+
+        # 4. Check explicit GOOGLE_APPLICATION_CREDENTIALS file
+        if not cred and os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") and os.path.exists(os.environ["GOOGLE_APPLICATION_CREDENTIALS"]):
+            try:
+                cred = credentials.ApplicationDefault()
+                logger.info("Firebase initialized via ApplicationDefault")
+            except Exception as e:
+                logger.warning(f"Could not load ApplicationDefault credentials: {e}")
+
+        if cred:
+            project_kwargs = {"projectId": settings.FIREBASE_PROJECT_ID} if settings.FIREBASE_PROJECT_ID != "your-firebase-project-id" else {}
+            firebase_admin.initialize_app(cred, project_kwargs)
             _firebase_initialized = True
     else:
         _firebase_initialized = True
-except Exception:
+except Exception as e:
+    logger.warning(f"Firebase Admin SDK initialization skipped: {e}")
     _firebase_initialized = False
 
 security_bearer = HTTPBearer()
@@ -37,6 +83,26 @@ class AuthUser(BaseModel):
     uid: str
     email: str
     role: str
+
+_jwks_client: Optional[jwt.PyJWKClient] = None
+
+def _get_jwks_client() -> jwt.PyJWKClient:
+    global _jwks_client
+    if _jwks_client is None:
+        _jwks_client = jwt.PyJWKClient(
+            "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com",
+            cache_keys=True
+        )
+    return _jwks_client
+
+def _extract_role(email: str, raw_role: Optional[str]) -> str:
+    if raw_role:
+        return str(raw_role).upper()
+    domain = email.split("@")[-1].lower() if "@" in email else ""
+    allowed_doctor_domains = [d.strip().lower() for d in settings.DOCTOR_ALLOWED_EMAIL_DOMAINS.split(",") if d.strip()]
+    if domain and domain in allowed_doctor_domains and domain not in PERSONAL_EMAIL_DOMAINS:
+        return "DOCTOR"
+    return "PATIENT"
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Security(security_bearer)) -> AuthUser:
     token = credentials.credentials
@@ -66,22 +132,13 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Security(security_b
             
         return AuthUser(uid=uid, email=email, role=role.upper())
 
-    # 2. Firebase Verification using Firebase Admin SDK if initialized
+    # 2. Firebase Verification using Firebase Admin SDK if fully initialized
     if _firebase_initialized:
         try:
             decoded_token = fb_auth.verify_id_token(token)
             uid = decoded_token.get("uid") or decoded_token.get("sub")
             email = decoded_token.get("email", "")
-            raw_role = decoded_token.get("role")
-            if raw_role:
-                role = str(raw_role).upper()
-            else:
-                domain = email.split("@")[-1].lower() if "@" in email else ""
-                allowed_doctor_domains = [d.strip().lower() for d in settings.DOCTOR_ALLOWED_EMAIL_DOMAINS.split(",") if d.strip()]
-                if domain and domain in allowed_doctor_domains and domain not in PERSONAL_EMAIL_DOMAINS:
-                    role = "DOCTOR"
-                else:
-                    role = "PATIENT"
+            role = _extract_role(email, decoded_token.get("role"))
             if not uid:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -89,37 +146,32 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Security(security_b
                 )
             return AuthUser(uid=uid, email=email, role=role)
         except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"Firebase token verification failed: {str(e)}"
-            )
+            logger.info(f"Firebase Admin verify_id_token returned error: {e}. Attempting JWKS verification...")
 
-    # 3. Fallback JWT decoding when Firebase Admin SDK credentials are not configured
+    # 3. Google Public JWKS cryptographic signature verification (works without service account credentials)
     try:
-        # In production without initialized Firebase Admin, unverified decoding is strictly forbidden
-        options = {"verify_signature": True} if is_prod else {"verify_signature": False}
-        payload = jwt.decode(token, options=options)
+        jwks = _get_jwks_client()
+        signing_key = jwks.get_signing_key_from_jwt(token)
+        project_id = settings.FIREBASE_PROJECT_ID if settings.FIREBASE_PROJECT_ID != "your-firebase-project-id" else None
         
-        # Verify audience (firebase project id) if configured
-        if "aud" in payload and settings.FIREBASE_PROJECT_ID != "your-firebase-project-id":
-            if payload["aud"] != settings.FIREBASE_PROJECT_ID:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid token audience"
-                )
-            
-        uid = payload.get("sub") or payload.get("user_id") or payload.get("uid")
+        decode_options = {
+            "verify_signature": True,
+            "verify_aud": bool(project_id),
+            "verify_iss": bool(project_id)
+        }
+        
+        payload = jwt.decode(
+            token,
+            signing_key.key,
+            algorithms=["RS256"],
+            audience=project_id,
+            issuer=f"https://securetoken.google.com/{project_id}" if project_id else None,
+            options=decode_options
+        )
+        
+        uid = payload.get("user_id") or payload.get("sub") or payload.get("uid")
         email = payload.get("email", "")
-        raw_role = payload.get("role")
-        if raw_role:
-            role = str(raw_role).upper()
-        else:
-            domain = email.split("@")[-1].lower() if "@" in email else ""
-            allowed_doctor_domains = [d.strip().lower() for d in settings.DOCTOR_ALLOWED_EMAIL_DOMAINS.split(",") if d.strip()]
-            if domain and domain in allowed_doctor_domains and domain not in PERSONAL_EMAIL_DOMAINS:
-                role = "DOCTOR"
-            else:
-                role = "PATIENT"
+        role = _extract_role(email, payload.get("role"))
         
         if not uid:
             raise HTTPException(
@@ -128,11 +180,30 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Security(security_b
             )
             
         return AuthUser(uid=uid, email=email, role=role)
-        
+
     except jwt.PyJWTError as e:
+        logger.warning(f"Google JWKS token verification failed: {e}")
+        
+        # 4. Fallback for offline/development or unverified decoding
+        if not is_prod:
+            try:
+                payload = jwt.decode(token, options={"verify_signature": False})
+                uid = payload.get("user_id") or payload.get("sub") or payload.get("uid")
+                email = payload.get("email", "")
+                role = _extract_role(email, payload.get("role"))
+                if uid:
+                    return AuthUser(uid=uid, email=email, role=role)
+            except Exception:
+                pass
+                
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid authentication token: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Token verification error: {str(e)}"
         )
 
 PERSONAL_EMAIL_DOMAINS = {"gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "icloud.com", "aol.com", "protonmail.com"}
