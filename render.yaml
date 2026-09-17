@@ -1,0 +1,44 @@
+﻿services:
+  - type: web
+    name: healthvault-backend
+    runtime: python
+    rootDir: healthvault-backend-main
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        value: postgresql+psycopg://postgres.ogbjzxwokuhcbqbeuqcm:%24fy%26W3u4iKGCqe%24@aws-0-ap-south-1.pooler.supabase.com:6543/postgres?sslmode=require
+      - key: QDRANT_URL
+        value: https://87cacecf-9be1-4278-8601-319d27fcd7e0.eu-west-1-0.aws.cloud.qdrant.io:6333
+      - key: QDRANT_API_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIiwic3ViamVjdCI6ImFwaS1rZXk6Y2M1NTNjYzUtMGZjOC00NWEzLWFhZjEtYTQ0MTE4YjI4OGUxIn0.cS17sTis3TaWjv9iuXMXP40elMxtJarVBKmpX7FjCqs
+      - key: FIREBASE_PROJECT_ID
+        value: healthvalet-db
+      - key: FIREBASE_CLIENT_EMAIL
+        value: firebase-adminsdk-fbsvc@healthvalet-db.iam.gserviceaccount.com
+      - key: FIREBASE_CREDENTIALS_PATH
+        value: serviceAccountKey.json
+      - key: FRONTEND_URL
+        value: "*"
+
+  - type: web
+    name: healthvault-frontend
+    runtime: node
+    rootDir: healthvault-frontend-main
+    buildCommand: npm install && npm run build
+    startCommand: npm start -- -p $PORT
+    plan: free
+    envVars:
+      - key: NEXT_PUBLIC_FIREBASE_API_KEY
+        value: AIzaSyBj3xCDU-MZXLBfwW8PwyvKbWkw8VT_vTE
+      - key: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+        value: healthvalet-db.firebaseapp.com
+      - key: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+        value: healthvalet-db
+      - key: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+        value: healthvalet-db.firebasestorage.app
+      - key: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+        value: "311637480375"
+      - key: NEXT_PUBLIC_FIREBASE_APP_ID
+        value: "1:311637480375:web:710b569c1c6e4600e14e32"
