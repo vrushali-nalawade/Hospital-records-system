@@ -1,27 +1,41 @@
-Set-Content -Path .gitignore -Value @"
-# Virtual Environment (DO NOT UPLOAD)
+# Python & Node Environments
+node_modules/
 venv/
 .venv/
 env/
-
-# Python Caches
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
 .pytest_cache/
+.next/
+dist/
+build/
 
-# Local Vector Database & Storage Caches
-.qdrant/
-*.sqlite
-*.db
-
-# Environment Keys
+# Secret & Credential Keys (CRITICAL - DO NOT COMMIT)
+*.env
+*.env.*
 .env
 .env.local
+.env.development.local
+.env.test.local
+.env.production.local
+serviceAccountKey.json
+*serviceAccountKey*.json
+*.pem
+*.key
 
-# IDE Files
+# Local Data & SQLite DBs
+*.db
+*.sqlite
+*.sqlite3
+health_locker.db
+backend/qdrant_db/
+.qdrant/
+data/embeddings_cache.json
+models/
+
+# IDE & OS
 .vscode/
 .idea/
 .DS_Store
-"@
+Thumbs.db
