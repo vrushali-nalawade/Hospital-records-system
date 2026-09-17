@@ -1,0 +1,42 @@
+# Git and GitHub
+.git/
+.github/
+
+# Virtual Environments
+venv/
+.venv/
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+
+# Python cache & tests
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Databases
+*.db
+*.db.backup
+*.sqlite
+*.sqlite3
+
+# Local storage and cache
+backend/qdrant_db/
+backend/storage/
+qdrant_storage/
+storage/
+data/
+temp_*
+*.tmp
+
+# Node / Next.js artifacts
+node_modules/
+.next/
+
+# IDE and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

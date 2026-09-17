@@ -237,7 +237,8 @@ class MedicalEmbedder:
             from huggingface_hub import hf_hub_download
 
             try:
-                torch.set_num_threads(1)
+                threads = min(os.cpu_count() or 4, 8)
+                torch.set_num_threads(threads)
                 torch.set_grad_enabled(False)
             except Exception:
                 pass
@@ -371,7 +372,7 @@ class MedicalEmbedder:
             self.tokenizer = _CACHED_TOKENIZER
 
         all_embeddings = []
-        batch_size = 8
+        batch_size = 16
         with torch.no_grad():
             for i in range(0, len(formatted_texts), batch_size):
                 batch = formatted_texts[i : i + batch_size]

@@ -1,0 +1,45 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Python virtual environments
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local databases
+*.db
+*.db.backup
+*.sqlite
+*.sqlite3
+
+# Local Qdrant / generated data
+qdrant_storage/
+storage/
+data/
+
+# Temporary files
+temp_*
+*.tmp
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local Qdrant database
+backend/qdrant_db/
+
+# Large model artifacts
+models/
+*.safetensors
+*.bin
+*.pt

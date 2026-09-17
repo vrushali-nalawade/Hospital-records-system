@@ -86,14 +86,8 @@ class MedicalRetriever:
     def __init__(self, embedder: MedicalEmbedder, vector_store: MedicalVectorStore):
         self.embedder = embedder
         self.vector_store = vector_store
-        self._cross_encoder = None
+        self.cross_encoder = self._get_or_load_cross_encoder()
         self.patient_bm25_cache: Dict[str, Tuple[BM25Okapi, List[Dict[str, Any]]]] = {}
-
-    @property
-    def cross_encoder(self):
-        if self._cross_encoder is None:
-            self._cross_encoder = self._get_or_load_cross_encoder()
-        return self._cross_encoder
 
     def _get_or_load_cross_encoder(self):
         global _CACHED_CROSS_ENCODER
@@ -204,40 +198,10 @@ class MedicalRetriever:
         if not candidates:
             return []
 
-        pairs = [[query, str(c.get("searchable_text") or c.get("ocr") or "")] for c in candidates]
-        
-        # 1. Check for remote HF Space reranker
-        import os
-        hf_reranker_url = os.getenv("HF_RERANKER_URL")
-        hf_token = os.getenv("HF_API_TOKEN")
-
-        if hf_reranker_url:
-            import requests
-            headers = {"Content-Type": "application/json"}
-            if hf_token:
-                headers["Authorization"] = f"Bearer {hf_token}"
-            try:
-                res = requests.post(
-                    hf_reranker_url,
-                    json={"query": query, "passages": [p[1] for p in pairs]},
-                    headers=headers,
-                    timeout=20
-                )
-                if res.status_code == 200:
-                    data = res.json()
-                    scores = data.get("scores", data)
-                    if isinstance(scores, list) and len(scores) == len(candidates):
-                        for doc, score in zip(candidates, scores):
-                            doc["cross_encoder_score"] = float(score)
-                        candidates.sort(key=lambda x: x["cross_encoder_score"], reverse=True)
-                        return candidates[:top_k]
-            except Exception as e:
-                print(f"[retrieval] Remote HF reranker request failed: {e}. Falling back to local model.")
-
-        # 2. Local execution fallback
         if self.cross_encoder is None:
             raise RuntimeError("[retrieval] Cross-Encoder reranker model is not initialized.")
 
+        pairs = [[query, str(c.get("searchable_text") or c.get("ocr") or "")] for c in candidates]
         scores = self.cross_encoder.predict(pairs)
         for doc, score in zip(candidates, scores):
             doc["cross_encoder_score"] = float(score)

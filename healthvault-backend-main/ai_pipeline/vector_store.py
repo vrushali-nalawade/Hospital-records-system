@@ -6,6 +6,32 @@ Stores BGE-M3 1024-d embeddings and enforces patient filtering at the database l
 
 from typing import List, Dict, Any, Optional
 
+import socket
+
+_orig_getaddrinfo = socket.getaddrinfo
+
+def _safe_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+    try:
+        return _orig_getaddrinfo(host, port, family, type, proto, flags)
+    except Exception:
+        try:
+            import dns.resolver
+            resolver = dns.resolver.Resolver()
+            resolver.nameservers = ["8.8.8.8", "1.1.1.1"]
+            resolver.timeout = 3.0
+            resolver.lifetime = 3.0
+            answers = resolver.resolve(str(host), "A")
+            for rdata in answers:
+                try:
+                    return _orig_getaddrinfo(rdata.address, port, family, type, proto, flags)
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        raise
+
+socket.getaddrinfo = _safe_getaddrinfo
+
 try:
     from embeddings import format_record_for_embedding
 except ImportError:
@@ -45,12 +71,13 @@ class MedicalVectorStore:
                     https=True,
                     api_key=self.api_key,
                     prefer_grpc=False,
-                    check_compatibility=False
+                    check_compatibility=False,
+                    timeout=60.0
                 )
             elif self.location == ":memory:":
-                self.client = QdrantClient(location=":memory:")
+                self.client = QdrantClient(location=":memory:", timeout=60.0)
             else:
-                self.client = QdrantClient(path=self.location)
+                self.client = QdrantClient(path=self.location, timeout=60.0)
 
             collections = [c.name for c in self.client.get_collections().collections]
             if COLLECTION_NAME in collections:
@@ -69,6 +96,16 @@ class MedicalVectorStore:
                     vectors_config=VectorParams(size=self.vector_size, distance=Distance.COSINE)
                 )
                 print(f"[vector_store] Initialized Qdrant collection '{COLLECTION_NAME}' (dim={self.vector_size})")
+
+            from qdrant_client.models import PayloadSchemaType
+            try:
+                self.client.create_payload_index(
+                    collection_name=COLLECTION_NAME,
+                    field_name="patient_id",
+                    field_schema=PayloadSchemaType.KEYWORD
+                )
+            except Exception:
+                pass
 
         except ImportError:
             raise ImportError(
@@ -118,10 +155,16 @@ class MedicalVectorStore:
                 )
             )
 
-        self.client.upsert(
-            collection_name=COLLECTION_NAME,
-            points=points
-        )
+        # Batch upsert to prevent HTTP read timeouts across remote cloud connections
+        UPSERT_BATCH_SIZE = 25
+        for b_idx in range(0, len(points), UPSERT_BATCH_SIZE):
+            batch_slice = points[b_idx : b_idx + UPSERT_BATCH_SIZE]
+            self.client.upsert(
+                collection_name=COLLECTION_NAME,
+                points=batch_slice
+            )
+            print(f"[vector_store] Upserted batch {b_idx // UPSERT_BATCH_SIZE + 1}/{(len(points) + UPSERT_BATCH_SIZE - 1) // UPSERT_BATCH_SIZE} ({len(batch_slice)} points)")
+
         try:
             from embeddings import _get_process_rss_mb
             rss8 = _get_process_rss_mb()

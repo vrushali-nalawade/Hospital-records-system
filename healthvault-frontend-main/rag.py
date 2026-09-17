@@ -106,30 +106,6 @@ class LLMInterface:
         self.api_url = api_url or os.getenv("OPENROUTER_API_URL", "https://openrouter.ai/api/v1/chat/completions")
 
     def generate(self, prompt: str, system_prompt: str = "") -> str:
-        # 1. Hugging Face Space / Inference API endpoint
-        hf_llm_url = os.getenv("HF_LLM_URL")
-        hf_token = os.getenv("HF_API_TOKEN")
-        if hf_llm_url:
-            try:
-                headers = {"Content-Type": "application/json"}
-                if hf_token:
-                    headers["Authorization"] = f"Bearer {hf_token}"
-                payload = {
-                    "prompt": prompt,
-                    "system_prompt": system_prompt,
-                    "max_tokens": 512,
-                    "temperature": 0.1
-                }
-                res = requests.post(hf_llm_url, headers=headers, json=payload, timeout=25)
-                if res.status_code == 200:
-                    data = res.json()
-                    ans = data.get("answer") or data.get("response") or data.get("generated_text")
-                    if ans:
-                        return ans.strip()
-            except Exception as e:
-                print(f"[rag] HF Space LLM call failed: {e}")
-
-        # 2. OpenRouter API
         openrouter_key = os.getenv("OPENROUTER_API_KEY")
         if (self.provider in ["openrouter", "auto"]) and openrouter_key:
             try:
@@ -138,20 +114,19 @@ class LLMInterface:
                     "Content-Type": "application/json"
                 }
                 body = {
-                    "model": os.getenv("OPENROUTER_MODEL", self.model_name),
+                    "model": self.model_name,
                     "messages": [
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": prompt}
                     ],
                     "temperature": 0.1
                 }
-                res = requests.post(self.api_url, headers=headers, json=body, timeout=15)
+                res = requests.post(self.api_url, headers=headers, json=body, timeout=12)
                 if res.status_code == 200:
                     return res.json()["choices"][0]["message"]["content"].strip()
             except Exception as e:
                 print(f"[rag] OpenRouter call failed: {e}")
 
-        # 3. Local Ollama (if running)
         if self.provider in ["ollama", "auto"]:
             try:
                 res = requests.post(
@@ -164,7 +139,6 @@ class LLMInterface:
             except Exception:
                 pass
 
-        # 4. Deterministic grounded synthesis fallback
         return self._local_grounded_synthesis(prompt)
 
     def _local_grounded_synthesis(self, prompt: str) -> str:

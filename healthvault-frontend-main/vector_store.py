@@ -16,17 +16,8 @@ COLLECTION_NAME = "medical_records"
 
 class MedicalVectorStore:
 
-    def __init__(
-        self,
-        location: Optional[str] = None,
-        url: Optional[str] = None,
-        api_key: Optional[str] = None,
-        vector_size: int = 1024
-    ):
-        import os
-        self.url = (url or os.getenv("QDRANT_URL") or "").strip().strip("'\"") or None
-        self.api_key = (api_key or os.getenv("QDRANT_API_KEY") or "").strip().strip("'\"") or None
-        self.location = location or (":memory:" if not self.url else None)
+    def __init__(self, location: str = ":memory:", vector_size: int = 1024):
+        self.location = location
         self.vector_size = vector_size
         self.client = None
         self._init_client()
@@ -36,18 +27,7 @@ class MedicalVectorStore:
             from qdrant_client import QdrantClient
             from qdrant_client.models import VectorParams, Distance
 
-            if self.url:
-                print(f"[vector_store] Connecting to remote Qdrant Cloud at {self.url}...")
-                raw_host = self.url.replace("https://", "").replace("http://", "").split(":")[0].rstrip("/")
-                self.client = QdrantClient(
-                    host=raw_host,
-                    port=6333,
-                    https=True,
-                    api_key=self.api_key,
-                    prefer_grpc=False,
-                    check_compatibility=False
-                )
-            elif self.location == ":memory:":
+            if self.location == ":memory:":
                 self.client = QdrantClient(location=":memory:")
             else:
                 self.client = QdrantClient(path=self.location)
@@ -122,12 +102,6 @@ class MedicalVectorStore:
             collection_name=COLLECTION_NAME,
             points=points
         )
-        try:
-            from embeddings import _get_process_rss_mb
-            rss8 = _get_process_rss_mb()
-            print(f"[MEM_DIAGNOSTIC] [Stage 8] RSS after Qdrant upsert: {rss8:.1f} MB")
-        except Exception:
-            pass
         print(f"[vector_store] Successfully upserted {len(points)} record chunk(s) into Qdrant.")
         return len(points)
 

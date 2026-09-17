@@ -1,0 +1,121 @@
+﻿const en = {
+  // Navigation & Shell
+  dashboard: "Dashboard",
+  medicalRecords: "Medical Records",
+  uploadRecord: "Upload Record",
+  medicalHistory: "Medical History",
+  consentManagement: "Consent Management",
+  accessHistory: "Access History",
+  aiAssistant: "AI Assistant",
+  profile: "Profile",
+  logout: "Logout",
+  login: "Login",
+  register: "Register",
+  patients: "Patients",
+  accessRequests: "Access Requests",
+  settings: "Settings",
+  patientLogin: "Patient Login",
+  doctorLogin: "Doctor Login",
+  patientRegistration: "Patient Registration",
+
+  // Landing Page
+  heroTitle: "Securely organize, understand, and control access to your digital health records.",
+  heroSubtitle: "HealthLocker provides end-to-end encrypted medical record storage, AI-powered extraction, and consent-driven access control for patients and doctors.",
+  features: "Features",
+  howItWorks: "How It Works",
+  privacySecurity: "Privacy & Security",
+  aiUnderstanding: "AI Record Understanding",
+  getStarted: "Get Started",
+  loginAsPatient: "Log in as Patient",
+  loginAsDoctor: "Log in as Doctor",
+
+  // Auth Forms
+  email: "Email Address",
+  password: "Password",
+  fullName: "Full Name",
+  phone: "Phone Number",
+  dateOfBirth: "Date of Birth",
+  gender: "Gender",
+  male: "Male",
+  female: "Female",
+  other: "Other",
+  submit: "Submit",
+  accountCreated: "Account Created",
+
+  // Upload Flow
+  recordType: "Record Type",
+  clickOrDragFile: "Click to select or drag & drop a file",
+  supportedFormats: "PDF, JPG, JPEG, PNG — up to 10MB",
+  uploading: "Uploading",
+  processingOcr: "Processing & OCR",
+  ocrCompleted: "OCR Completed",
+  extractingInfo: "Medical Information Extracted",
+  ready: "Ready",
+  uploadSuccess: "Record uploaded and processed successfully.",
+  uploadFailed: "Upload failed. Please check the file and try again.",
+  retry: "Retry Upload",
+  uploadAnother: "Upload Another Record",
+  viewInRecords: "View in Medical Records",
+
+  // Medical Records & Filters
+  searchPlaceholder: "Search records by name or keyword...",
+  allTypes: "All Record Types",
+  sortNewest: "Newest First",
+  sortOldest: "Oldest First",
+  noRecordsFound: "No medical records found.",
+  confidence: "Confidence",
+  needsReview: "Needs Review",
+
+  // AI Assistant
+  aiAssistantTitle: "AI Health Assistant",
+  askQuestionPlaceholder: "Ask a question about your uploaded medical records...",
+  askButton: "Ask AI",
+  exampleQuestions: "Suggested Questions:",
+  citations: "Citations & Sources:",
+  safeAbstentionNotice: "No matching information was found in your uploaded records.",
+
+  // Consent & Access Control
+  consentId: "Consent ID",
+  doctorName: "Doctor Name",
+  permissions: "Permissions",
+  status: "Status",
+  expiresAt: "Expires At",
+  revokeAccess: "Revoke Access",
+  confirmRevokeTitle: "Revoke Doctor Access?",
+  confirmRevokeText: "Are you sure you want to revoke access? The doctor will immediately lose access to your records and AI assistant queries.",
+  grantConsent: "Grant Access",
+
+  // Preferences & Profile
+  preferences: "Preferences & Settings",
+  language: "Language",
+  theme: "Theme",
+  lightTheme: "Light",
+  darkTheme: "Dark",
+  systemTheme: "System",
+  notifications: "Push Notifications",
+  notificationsOn: "Enabled",
+  notificationsOff: "Disabled",
+  savePreferences: "Save Preferences",
+
+  // General & Buttons
+  save: "Save",
+  cancel: "Cancel",
+  remove: "Remove",
+  yes: "Yes",
+  no: "No",
+
+  // Dashboard & Activity
+  welcomeBack: "Welcome back",
+  overviewSub: "Here's an overview of your health locker.",
+  quickUpload: "Quick Upload",
+  totalMedicalRecords: "Total Medical Records",
+  pendingConsentRequests: "Pending Consent Requests",
+  activeDoctorAccess: "Active Doctor Access",
+  recentActivity: "Recent Activity",
+  recentRecords: "Recent Records",
+  viewAll: "View all",
+  noRecordsYet: "No records uploaded yet.",
+  noActivityYet: "No activity yet.",
+};
+
+export default en;
