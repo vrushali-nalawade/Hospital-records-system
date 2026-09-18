@@ -157,20 +157,26 @@ def get_embedding(text: str) -> List[float]:
     # 1. Hugging Face Spaces Remote Microservice Fast-Path
     if settings.HF_EMBEDDING_URL:
         try:
+            embed_url = settings.HF_EMBEDDING_URL.strip().rstrip("/")
+            if not embed_url.endswith("/embed"):
+                embed_url = f"{embed_url}/embed"
+                
             headers = {}
             if settings.HF_API_TOKEN:
                 headers["Authorization"] = f"Bearer {settings.HF_API_TOKEN}"
             resp = requests.post(
-                settings.HF_EMBEDDING_URL,
+                embed_url,
                 json={"texts": [text]},
                 headers=headers,
-                timeout=10
+                timeout=15
             )
             if resp.status_code == 200:
                 data = resp.json()
                 embeddings = data.get("embeddings", [])
                 if embeddings and len(embeddings[0]) == VECTOR_SIZE:
                     return embeddings[0]
+            else:
+                print(f"[ai_service] HF Space returned status {resp.status_code}: {resp.text}")
         except Exception as e:
             print(f"[ai_service] Hugging Face Space embedding request failed: {e}. Falling back to local embedder.")
 
