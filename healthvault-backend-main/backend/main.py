@@ -11,13 +11,6 @@ from .auth import get_current_user
 from .schemas import AccessLogResponse
 from .routes import auth, patients, documents, consent, ai
 
-# Limit PyTorch CPU worker threads to 1 to eliminate GIL CPU starvation on Replit
-try:
-    import torch
-    torch.set_num_threads(1)
-except Exception:
-    pass
-
 # Initialize database tables (PostgreSQL or SQLite fallback)
 try:
     Base.metadata.create_all(bind=engine)

@@ -32,9 +32,9 @@ class Settings(BaseSettings):
     TESTING: bool = False
 
     # Hugging Face Spaces AI Microservice Endpoints
-    HF_EMBEDDING_URL: Optional[str] = None  # e.g. https://username-bge-m3-embedder.hf.space/embed
-    HF_RERANKER_URL: Optional[str] = None   # e.g. https://username-cross-encoder-reranker.hf.space/rerank
-    HF_LLM_URL: Optional[str] = None        # e.g. https://username-clinical-llm.hf.space/generate
+    HF_EMBEDDING_URL: Optional[str] = "https://vrushalily-healthvault-ai.hf.space"
+    HF_RERANKER_URL: Optional[str] = "https://vrushalily-healthvault-ai.hf.space"
+    HF_LLM_URL: Optional[str] = "https://vrushalily-healthvault-ai.hf.space"
     HF_API_TOKEN: Optional[str] = None      # HuggingFace Access Token if space is private
     OPENROUTER_API_KEY: Optional[str] = None # OpenRouter fallback for LLM synthesis
     OPENROUTER_MODEL: str = "openai/gpt-4o-mini"

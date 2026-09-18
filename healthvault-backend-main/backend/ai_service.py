@@ -4,12 +4,14 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
 from .config import settings
 
-# Try importing teammate's RAG pipeline from Hospital-records-system
-try:
-    import pipeline_api
-    HAS_TEAMMATES_RAG = True
-except ImportError:
-    HAS_TEAMMATES_RAG = False
+# Try importing teammate's RAG pipeline only in local dev (Render has 512MB RAM limit)
+HAS_TEAMMATES_RAG = False
+if not os.environ.get("RENDER") and getattr(settings, "ENVIRONMENT", "").lower() != "production":
+    try:
+        import pipeline_api
+        HAS_TEAMMATES_RAG = True
+    except (ImportError, Exception):
+        HAS_TEAMMATES_RAG = False
 
 import os
 import json

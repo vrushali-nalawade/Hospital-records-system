@@ -71,12 +71,13 @@ def call_person2_ocr_nlp(document_path: str, patient_id: str, document_id: str) 
 
     return data
 
-try:
-    # Try importing teammate's pipeline from Hospital-records-system
-    from full_pipeline import process_medical_document
-    HAS_TEAMMATES_PIPELINE = True
-except ImportError:
-    HAS_TEAMMATES_PIPELINE = False
+HAS_TEAMMATES_PIPELINE = False
+if not os.environ.get("RENDER") and getattr(settings, "ENVIRONMENT", "").lower() != "production":
+    try:
+        from full_pipeline import process_medical_document
+        HAS_TEAMMATES_PIPELINE = True
+    except (ImportError, Exception):
+        HAS_TEAMMATES_PIPELINE = False
 
 def convert_pipeline_to_backend_format(pipeline_output: dict, patient_id: str) -> dict:
     ner = pipeline_output.get("ner_result", {})

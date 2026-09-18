@@ -235,12 +235,14 @@ class MedicalRetriever:
                 print(f"[retrieval] Remote HF reranker request failed: {e}. Falling back to local model.")
 
         # 2. Local execution fallback
-        if self.cross_encoder is None:
-            raise RuntimeError("[retrieval] Cross-Encoder reranker model is not initialized.")
-
-        scores = self.cross_encoder.predict(pairs)
-        for doc, score in zip(candidates, scores):
-            doc["cross_encoder_score"] = float(score)
-        candidates.sort(key=lambda x: x["cross_encoder_score"], reverse=True)
+        try:
+            if self.cross_encoder is not None:
+                scores = self.cross_encoder.predict(pairs)
+                for doc, score in zip(candidates, scores):
+                    doc["cross_encoder_score"] = float(score)
+                candidates.sort(key=lambda x: x["cross_encoder_score"], reverse=True)
+                return candidates[:top_k]
+        except Exception as e:
+            print(f"[retrieval] Cross encoder fallback to RRF candidates: {e}")
 
         return candidates[:top_k]
