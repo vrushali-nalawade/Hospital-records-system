@@ -27,81 +27,11 @@ export default function RecordViewer({
   const handleOpenSecureDocument = async () => {
     setLoadingUrl(true);
     try {
-      // 1. If demo file URL or direct static link exists, open it directly
-      if (record.fileUrl && !record.fileUrl.startsWith("http") && !record.fileUrl.includes("/documents/")) {
-        window.open(record.fileUrl, "_blank", "noopener,noreferrer");
-        return;
+      const signedUrl = await fetchDocumentSignedUrl(record.recordId);
+      const target = signedUrl || record.fileUrl || `${API_BASE_URL}/documents/${record.recordId}`;
+      if (target) {
+        window.open(target, "_blank", "noopener,noreferrer");
       }
-
-      // 2. Fetch authenticated document blob stream from backend
-      try {
-        const headers = await getAuthHeaders();
-        const res = await fetch(`${API_BASE_URL}/documents/${record.recordId}`, {
-          headers
-        });
-
-        if (res.ok) {
-          const blob = await res.blob();
-          if (blob.size > 100) {
-            const blobUrl = URL.createObjectURL(blob);
-            window.open(blobUrl, "_blank", "noopener,noreferrer");
-            return;
-          }
-        }
-      } catch (streamErr) {
-        console.warn("Stream fetch notice:", streamErr);
-      }
-
-      // 3. Render secure interactive clinical preview tab
-      const docHtml = `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>${record.fileName} - Medical Record</title>
-          <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; margin: 0; padding: 40px 20px; color: #1e293b; }
-            .container { max-width: 680px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; padding: 32px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-            .badge { display: inline-block; padding: 4px 12px; background: #ccfbf1; color: #0f766e; border-radius: 9999px; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 12px; }
-            h1 { font-size: 20px; font-weight: 700; color: #0f172a; margin: 0 0 4px 0; }
-            .sub { color: #64748b; font-size: 13px; margin-bottom: 24px; }
-            .section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; margin-top: 24px; margin-bottom: 12px; }
-            .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
-            .item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #edf2f7; font-size: 14px; }
-            .item:last-child { border-bottom: none; }
-            .item-label { color: #64748b; }
-            .item-val { font-weight: 600; color: #0f172a; text-align: right; }
-            .footer { margin-top: 32px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 16px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <span class="badge">Verified Medical Document</span>
-            <h1>${record.fileName}</h1>
-            <div class="sub">Document ID: ${record.recordId} • Uploaded on ${new Date(record.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })}</div>
-            
-            <div class="section-title">Clinically Extracted Findings</div>
-            <div class="card">
-              ${record.extractedInformation.map(item => `
-                <div class="item">
-                  <span class="item-label">${item.label}</span>
-                  <span class="item-val">${item.value}</span>
-                </div>
-              `).join("")}
-            </div>
-
-            <div class="footer">
-              HealthVault AI • End-to-End Secure Health Record Management
-            </div>
-          </div>
-        </body>
-        </html>
-      `;
-      const blob = new Blob([docHtml], { type: "text/html" });
-      const blobUrl = URL.createObjectURL(blob);
-      window.open(blobUrl, "_blank", "noopener,noreferrer");
-
     } catch (err) {
       console.error("Notice opening secure document:", err);
       window.open(`${API_BASE_URL}/documents/${record.recordId}`, "_blank", "noopener,noreferrer");
@@ -177,6 +107,7 @@ export default function RecordViewer({
                 {record.processingStatus === "failed" && record.extractedInformation.length > 0 ? "ready" : record.processingStatus.replace("_", " ")}
               </Badge>
             </div>
+          </div>
 
           <div>
             <div className="mb-2 flex items-center justify-between">

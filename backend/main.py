@@ -1,0 +1,134 @@
+from fastapi import FastAPI, Depends, Request
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
+from typing import List
+
+from .config import settings
+from .database import engine, Base, get_db
+from .models import User, Patient, AccessLog
+from .auth import get_current_user
+from .schemas import AccessLogResponse
+from .routes import auth, patients, documents, consent, ai
+
+# Initialize database tables (PostgreSQL or SQLite fallback)
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    import logging
+    logging.getLogger("backend").warning(f"Could not connect to database on startup: {e}")
+
+app = FastAPI(
+    title="HealthVault AI Backend",
+    description="Secure backend and integration layer for HealthVault AI (Person 4)",
+    version="1.0.0"
+)
+
+# CORS Policy configuration (allowing active frontend origins, Render, Vercel, and local dev)
+import logging
+logger = logging.getLogger("backend")
+logger.info(f"Configured CORS Allowed Origins: {settings.cors_origins}")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins + [
+        "https://hospital-records-system-front.onrender.com",
+        "https://hospital-records-system.onrender.com"
+    ],
+    allow_origin_regex=r"^https?://.*",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
+    logger.error(f"Global unhandled error: {exc}\n{traceback.format_exc()}")
+    origin = request.headers.get("origin") or "*"
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc)},
+        headers={
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
+
+# Security Headers Middleware
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    if settings.ENVIRONMENT.lower() == "production" and request.url.scheme == "https":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
+
+# Mount APIRouters
+app.include_router(auth.router)
+app.include_router(patients.router)
+app.include_router(documents.router)
+app.include_router(consent.router)
+app.include_router(ai.router)
+
+@app.get("/", tags=["root"])
+def root():
+    return {
+        "status": "online",
+        "service": "HealthVault AI Backend",
+        "version": "1.0.0",
+        "health": "/health",
+        "docs": "/docs"
+    }
+
+@app.get("/api/storage/signed")
+@app.get("/storage/signed")
+def serve_signed_storage(
+    path: str = "",
+    expires: int = 0,
+    token: str = "",
+):
+    from .storage import storage_service, get_document_path, MIME_MAP
+    from fastapi.responses import FileResponse
+    import os
+    if not storage_service.verify_signed_url_token(path, expires, token):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Signed access link has expired or has an invalid signature")
+    safe_path = get_document_path(path)
+    if not os.path.exists(safe_path):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Document file not found")
+    filename = os.path.basename(path)
+    _, ext = os.path.splitext(filename)
+    media_type = MIME_MAP.get(ext.lower(), "application/octet-stream")
+    return FileResponse(safe_path, media_type=media_type, filename=filename)
+
+# Expose global audit history log endpoint
+@app.get("/audit/me", response_model=List[AccessLogResponse], tags=["audit"])
+def get_my_audit_logs(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    role = current_user.role.upper()
+    
+    if role == "PATIENT":
+        # Patients can see access history relating to their records
+        patient = db.query(Patient).filter(Patient.user_id == current_user.id).first()
+        if not patient:
+            return []
+        return db.query(AccessLog).filter(AccessLog.patient_id == patient.id).all()
+        
+    elif role == "DOCTOR":
+        # Doctors can see history of actions they performed
+        return db.query(AccessLog).filter(AccessLog.actor_id == current_user.id).all()
+        
+    elif role == "ADMIN":
+        # Admin can view all system logs
+        return db.query(AccessLog).all()
+        
+    return []

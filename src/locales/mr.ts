@@ -1,26 +1,121 @@
-const mr = {
+﻿const mr = {
+  // Navigation & Shell
   dashboard: "डॅशबोर्ड",
   medicalRecords: "वैद्यकीय नोंदी",
   uploadRecord: "नोंद अपलोड करा",
   medicalHistory: "वैद्यकीय इतिहास",
   consentManagement: "संमती व्यवस्थापन",
-  accessHistory: "प्रवेश इतिहास",
+  accessHistory: "वापर इतिहास",
   aiAssistant: "एआय सहाय्यक",
   profile: "प्रोफाइल",
-  logout: "लॉगआउट",
-  login: "लॉगिन",
+  logout: "लॉग आउट",
+  login: "लॉग इन",
   register: "नोंदणी",
   patients: "रुग्ण",
-  accessRequests: "प्रवेश विनंत्या",
+  accessRequests: "वापर विनंत्या",
   settings: "सेटिंग्ज",
   patientLogin: "रुग्ण लॉगिन",
   doctorLogin: "डॉक्टर लॉगिन",
   patientRegistration: "रुग्ण नोंदणी",
-  heroTitle: "तुमच्या डिजिटल आरोग्य नोंदी सुरक्षितपणे व्यवस्थित करा, समजून घ्या आणि नियंत्रित करा.",
+
+  // Landing Page
+  heroTitle: "तुमच्या डिजिटल आरोग्य नोंदी सुरक्षितपणे आयोजित करा, समजून घ्या आणि वापर नियंत्रित करा.",
+  heroSubtitle: "हेल्थलॉकर रुग्ण आणि डॉक्टरांसाठी सुरक्षित स्टोरेज, एआय-आधारित माहिती काढणे आणि संमती-आधारित प्रवेश प्रदान करते.",
   features: "वैशिष्ट्ये",
   howItWorks: "हे कसे कार्य करते",
   privacySecurity: "गोपनीयता आणि सुरक्षा",
-  aiUnderstanding: "एआय नोंद आकलन",
+  aiUnderstanding: "एआय माहिती स्पष्टीकरण",
+  getStarted: "शुरू करा",
+  loginAsPatient: "रुग्ण म्हणून लॉग इन करा",
+  loginAsDoctor: "डॉक्टर म्हणून लॉग इन करा",
+
+  // Auth Forms
+  email: "ईमेल पत्ता",
+  password: "पासवर्ड",
+  fullName: "पूर्ण नाव",
+  phone: "फोन नंबर",
+  dateOfBirth: "जन्म तारीख",
+  gender: "लिंग",
+  male: "पुरुष",
+  female: "स्त्री",
+  other: "इतर",
+  submit: "सबमिट करा",
+  accountCreated: "खाते तयार झाले",
+
+  // Upload Flow
+  recordType: "नोंद प्रकार",
+  clickOrDragFile: "फाइल निवडण्यासाठी क्लिक करा किंवा ड्रॅग आणि ड्रॉप करा",
+  supportedFormats: "PDF, JPG, JPEG, PNG — 10MB पर्यंत",
+  uploading: "अपलोड होत आहे",
+  processingOcr: "प्रक्रिया आणि ओसीआर",
+  ocrCompleted: "ओसीआर पूर्ण झाले",
+  extractingInfo: "वैद्यकीय माहिती काढली",
+  ready: "तयार",
+  uploadSuccess: "नोंद यशस्वीरित्या अपलोड आणि प्रक्रिया झाली.",
+  uploadFailed: "अपलोड अयशस्वी. कृपया फाइल तपासा आणि पुन्हा प्रयत्न करा.",
+  retry: "पुन्हा प्रयत्न करा",
+  uploadAnother: "आणखी एक नोंद अपलोड करा",
+  viewInRecords: "वैद्यकीय नोंदींमध्ये पहा",
+
+  // Medical Records & Filters
+  searchPlaceholder: "नाव किंवा शब्दाने शोधा...",
+  allTypes: "सर्व नोंद प्रकार",
+  sortNewest: "नवीनतम आधी",
+  sortOldest: "जुने आधी",
+  noRecordsFound: "कोणत्याही वैद्यकीय नोंदी सापडल्या नाहीत.",
+  confidence: "विश्वासार्हता",
+  needsReview: "पुनरावलोकन आवश्यक",
+
+  // AI Assistant
+  aiAssistantTitle: "एआय आरोग्य सहाय्यक",
+  askQuestionPlaceholder: "तुमच्या अपलोड केलेल्या वैद्यकीय नोंदींबद्दल प्रश्न विचारा...",
+  askButton: "एआय ला विचारा",
+  exampleQuestions: "सुचवलेले प्रश्न:",
+  citations: "संदर्भ आणि स्रोत:",
+  safeAbstentionNotice: "तुमच्या अपलोड केलेल्या नोंदींमध्ये कोणतीही संबंधित माहिती आढळली नाही.",
+
+  // Consent & Access Control
+  consentId: "संमती आयडी",
+  doctorName: "डॉक्टरांचे नाव",
+  permissions: "परवानग्या",
+  status: "स्थिती",
+  expiresAt: "मुदत संपण्याची तारीख",
+  revokeAccess: "परवानगी रद्द करा",
+  confirmRevokeTitle: "तुम्हाला डॉक्टरांची परवानगी रद्द करायची आहे का?",
+  confirmRevokeText: "तुम्हाला खात्री आहे का? डॉक्टर तात्काळ तुमच्या नोंदी आणि एआय सहाय्यक वापराची परवानगी गमावतील.",
+  grantConsent: "परवानगी द्या",
+
+  // Preferences & Profile
+  preferences: "प्राधान्ये आणि सेटिंग्ज",
+  language: "भाषा",
+  theme: "थीम",
+  lightTheme: "लाइट",
+  darkTheme: "डार्क",
+  systemTheme: "सिस्टम",
+  notifications: "पुश सूचना",
+  notificationsOn: "सक्षम",
+  notificationsOff: "अक्षम",
+  savePreferences: "प्राधान्ये जतन करा",
+
+  // General & Buttons
+  save: "जतन करा",
+  cancel: "रद्द करा",
+  remove: "काढून टाका",
+  yes: "होय",
+  no: "नाही",
+
+  // Dashboard & Activity
+  welcomeBack: "पुन्हा स्वागत आहे",
+  overviewSub: "हे तुमच्या हेल्थ लॉकरचे संक्षिप्त विवरण आहे.",
+  quickUpload: "जलद अपलोड",
+  totalMedicalRecords: "एकूण वैद्यकीय नोंदी",
+  pendingConsentRequests: "प्रलंबित संमती विनंत्या",
+  activeDoctorAccess: "सक्रिय डॉक्टर प्रवेश",
+  recentActivity: "अलीकडील हालचाली",
+  recentRecords: "अलीकडील नोंदी",
+  viewAll: "सर्व पहा",
+  noRecordsYet: "अजून कोणतीही नोंद अपलोड केलेली नाही.",
+  noActivityYet: "अजून कोणतीही हालचाल नाही.",
 };
 
 export default mr;
