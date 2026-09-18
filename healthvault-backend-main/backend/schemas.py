@@ -91,6 +91,7 @@ class AccessLogResponse(BaseModel):
 class AIQueryRequest(BaseModel):
     patient_id: str
     question: str
+    document_id: Optional[str] = None
 
 class Citation(BaseModel):
     document_id: str
@@ -101,6 +102,7 @@ class AIQueryResponse(BaseModel):
     answer: str
     sources: List[Citation]
     abstained: bool
+
 
 class TimelineEvent(BaseModel):
     date: str

@@ -1,33 +1,71 @@
 "use client";
 
 import { useState } from "react";
-import { X, FileWarning, ExternalLink, Lock } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { X, FileWarning, ExternalLink, Lock, Bot, Trash2 } from "lucide-react";
 import Badge from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
 import { recordTypeLabel } from "@/lib/mock/mock-data";
-import { fetchDocumentSignedUrl } from "@/lib/services/records-service";
+import { fetchDocumentSignedUrl, deleteMedicalRecord } from "@/lib/services/records-service";
+import { API_BASE_URL } from "@/lib/api-config";
+import { pushToast } from "@/components/ui/Toast";
 import type { MedicalRecord } from "@/types";
 
 export default function RecordViewer({
   record,
   onClose,
+  onDelete,
 }: {
   record: MedicalRecord;
   onClose: () => void;
+  onDelete?: (recordId: string) => void;
 }) {
+  const router = useRouter();
   const [loadingUrl, setLoadingUrl] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const handleOpenSecureDocument = async () => {
     setLoadingUrl(true);
     try {
       const signedUrl = await fetchDocumentSignedUrl(record.recordId);
-      const target = signedUrl || record.fileUrl;
+      const target = signedUrl || record.fileUrl || `${API_BASE_URL}/documents/${record.recordId}`;
       if (target) {
         window.open(target, "_blank", "noopener,noreferrer");
       }
     } catch (err) {
       console.error("Error opening secure document:", err);
+      window.open(`${API_BASE_URL}/documents/${record.recordId}`, "_blank", "noopener,noreferrer");
     } finally {
       setLoadingUrl(false);
+    }
+  };
+
+  const handleAskAI = () => {
+    onClose();
+    router.push(`/patient/ai-assistant?doc=${record.recordId}`);
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm(`Are you sure you want to delete this ${recordTypeLabel[record.recordType] || "record"} (${record.fileName})? This action cannot be undone.`)) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      await deleteMedicalRecord(record.recordId);
+      pushToast({
+        type: "info",
+        message: `Record ${record.fileName} deleted successfully.`,
+      });
+      onDelete?.(record.recordId);
+      onClose();
+    } catch (e) {
+      console.error("Failed to delete record:", e);
+      pushToast({
+        type: "warning",
+        message: "Failed to delete record from server. Please try again.",
+      });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -61,7 +99,7 @@ export default function RecordViewer({
                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-600 hover:text-teal-700 hover:underline disabled:opacity-50"
                 >
                   <Lock className="h-3.5 w-3.5" />
-                  {loadingUrl ? "Generating Secure Signed URL..." : "Access Secure Document"}
+                  {loadingUrl ? "Opening Document..." : "Access Secure Document"}
                   <ExternalLink className="h-3 w-3" />
                 </button>
               </div>
@@ -93,8 +131,31 @@ export default function RecordViewer({
               </div>
             )}
             <p className="mt-2 text-xs text-slate-400">
-              This information is a demo/mock extraction and does not represent actual medical analysis.
+              Extracted medical data is processed with OCR & clinical NER models.
             </p>
+          </div>
+
+          {/* Action Toolbar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleAskAI}
+              className="inline-flex items-center gap-1.5 bg-teal-600 text-white hover:bg-teal-700"
+            >
+              <Bot className="h-4 w-4" /> Ask AI About This Record
+            </Button>
+
+            <Button
+              type="button"
+              size="sm"
+              variant="danger"
+              disabled={deleting}
+              onClick={handleDelete}
+              className="inline-flex items-center gap-1.5"
+            >
+              <Trash2 className="h-4 w-4" /> {deleting ? "Deleting..." : "Delete Record"}
+            </Button>
           </div>
         </div>
       </div>

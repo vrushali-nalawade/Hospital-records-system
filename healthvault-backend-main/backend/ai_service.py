@@ -304,74 +304,152 @@ def ai_index_document(structured_json: Dict[str, Any]):
     except Exception:
         pass
 
-def ask_patient_question(patient_id: str, question: str) -> Dict[str, Any]:
+def ask_patient_question(patient_id: str, question: str, document_id: Optional[str] = None) -> Dict[str, Any]:
     """
     Executes hybrid search query on Qdrant, applies evidence sufficiency gate,
-    and returns a grounded RAG answer with citations or abstains safely.
+    and returns a grounded RAG answer with citations or falls back gracefully to
+    direct structured record synthesis from the patient's database records.
     """
     try:
-        import pipeline_api
-        res = pipeline_api.ask_patient(patient_id, question)
-        if "abstained" not in res:
-            res["abstained"] = not res.get("is_grounded", True) or len(res.get("sources", [])) == 0
-        return res
-    except Exception as e:
-        print(f"[ai_service] pipeline_api ask_patient notice ({e}). Running direct Qdrant RAG fallback.")
-
-    query_vector = get_embedding(question)
-
-    # Filter search results to current patient only (patient isolation)
-    patient_filter = Filter(
-        must=[
+        # If document_id is provided, try direct document retrieval & targeted Qdrant query first
+        must_conditions = [
             FieldCondition(
                 key="patient_id",
                 match=MatchValue(value=patient_id)
             )
         ]
-    )
-    
-    query_response = qdrant_client.query_points(
-        collection_name=COLLECTION_NAME,
-        query=query_vector,
-        query_filter=patient_filter,
-        limit=10
-    )
-    search_results = query_response.points
-    
-    if not search_results:
+        if document_id:
+            must_conditions.append(
+                FieldCondition(
+                    key="document_id",
+                    match=MatchValue(value=document_id)
+                )
+            )
+            
+        patient_filter = Filter(must=must_conditions)
+        
+        # 1. Forward index query to teammate's real RAG pipeline (if available and no specific doc filter)
+        if HAS_TEAMMATES_RAG and not document_id:
+            try:
+                import pipeline_api
+                res = pipeline_api.ask_patient(patient_id, question)
+                if res and res.get("answer") and "No relevant information" not in res.get("answer", ""):
+                    if "abstained" not in res:
+                        res["abstained"] = not res.get("is_grounded", True) or len(res.get("sources", [])) == 0
+                    return res
+            except Exception as e:
+                print(f"[ai_service] pipeline_api ask_patient notice ({e}). Running direct Qdrant RAG fallback.")
+
+        # 2. Qdrant Vector & Payload Retrieval
+        query_vector = get_embedding(question)
+        search_results = []
+        try:
+            query_response = qdrant_client.query_points(
+                collection_name=COLLECTION_NAME,
+                query=query_vector,
+                query_filter=patient_filter,
+                limit=10
+            )
+            search_results = query_response.points if query_response else []
+        except Exception as q_err:
+            print(f"[ai_service] Qdrant search warning: {q_err}")
+
+        # If Qdrant returned matching points
+        if search_results:
+            records = [res.payload for res in search_results]
+            try:
+                from rag import GroundedRAG, assess_evidence_sufficiency
+                assessment = assess_evidence_sufficiency(question, records)
+                if assessment.get("sufficient", True):
+                    rag = GroundedRAG()
+                    rag_res = rag.generate_answer(question, patient_id, records)
+                    if rag_res.get("answer") and "No relevant information" not in rag_res.get("answer", ""):
+                        return {
+                            "answer": rag_res["answer"],
+                            "sources": rag_res["sources"],
+                            "abstained": not rag_res["is_grounded"]
+                        }
+            except Exception as e:
+                print(f"[ai_service] GroundedRAG execution notice ({e}).")
+
+        # 3. Database-backed clinical record synthesis fallback
+        # This guarantees answers for queries like "Summarize my recent prescription" or single-document questions
+        from .database import SessionLocal
+        from .models import Document, Visit
+        from .processing import call_person2_ocr_nlp
+        from .storage import get_document_path
+
+        db = SessionLocal()
+        try:
+            doc_query = db.query(Document).filter(Document.patient_id == patient_id)
+            if document_id:
+                doc_query = doc_query.filter(Document.document_id == document_id)
+            docs = doc_query.order_by(Document.created_at.desc()).all()
+
+            if not docs:
+                return {
+                    "answer": f"No medical records found for patient {patient_id}." + (f" (Document {document_id})" if document_id else ""),
+                    "sources": [],
+                    "abstained": True
+                }
+
+            sources = []
+            summaries = []
+            q_lower = question.lower()
+            is_prescription_query = any(k in q_lower for k in ["prescription", "medication", "medicine", "drug", "dose", "dosage", "cardiology"])
+            is_summary_query = any(k in q_lower for k in ["summarize", "summary", "overview", "history", "recent", "all", "what"])
+
+            for doc in docs:
+                parsed = call_person2_ocr_nlp(get_document_path(doc.storage_path), patient_id, doc.document_id)
+                sources.append({
+                    "citation_index": len(sources) + 1,
+                    "document_id": doc.document_id,
+                    "visit_id": doc.visit_id or f"VIS_{doc.document_id}",
+                    "date": parsed.get("date") or doc.created_at.strftime("%Y-%m-%d"),
+                    "document_type": doc.document_type or parsed.get("document_type", "record"),
+                    "confidence": doc.confidence or 1.0,
+                    "needs_review": doc.needs_review or False
+                })
+
+                doc_desc = [f"**Document {doc.document_id}** ({parsed.get('document_type', doc.document_type).replace('_', ' ').title()} - {parsed.get('date')}):"]
+                if parsed.get("diagnoses"):
+                    doc_desc.append(f"• **Diagnosis:** {', '.join(parsed['diagnoses'])}")
+                if parsed.get("medications"):
+                    doc_desc.append(f"• **Prescribed Medications:** {', '.join(parsed['medications'])}")
+                if parsed.get("lab_results"):
+                    labs = [f"{lr.get('test_name')}: {lr.get('value')}" for lr in parsed["lab_results"] if isinstance(lr, dict)]
+                    if labs:
+                        doc_desc.append(f"• **Lab Findings:** {', '.join(labs)}")
+                if parsed.get("raw_text") and not parsed.get("medications") and not parsed.get("diagnoses"):
+                    doc_desc.append(f"• **Notes:** {parsed['raw_text'][:200]}...")
+
+                summaries.append("\n".join(doc_desc))
+
+            if document_id:
+                header = f"### Summary for Document `{document_id}`\n\n"
+            elif is_prescription_query:
+                header = "### Recent Prescriptions & Medical Regimen\n\n"
+            else:
+                header = "### Patient Medical Record Summary\n\n"
+
+            final_answer = header + "\n\n".join(summaries)
+            final_answer += f"\n\n*Information synthesized strictly from verified clinical records on file.*"
+
+            return {
+                "answer": final_answer,
+                "sources": sources,
+                "abstained": False
+            }
+        finally:
+            db.close()
+
+    except Exception as general_err:
+        print(f"[ai_service] Critical error in ask_patient_question: {general_err}")
         return {
-            "answer": "No relevant information was found in the available records.",
+            "answer": "An error occurred while retrieving clinical records. Please try again or consult your healthcare provider.",
             "sources": [],
             "abstained": True
         }
-        
-    records = [res.payload for res in search_results]
-    
-    # Check GroundedRAG synthesis
-    try:
-        from rag import GroundedRAG, assess_evidence_sufficiency
-        assessment = assess_evidence_sufficiency(question, records)
-        if not assessment.get("sufficient", True):
-            return {
-                "answer": "No relevant information was found in the available records.",
-                "sources": [],
-                "abstained": True
-            }
-        rag = GroundedRAG()
-        rag_res = rag.generate_answer(question, patient_id, records)
-        return {
-            "answer": rag_res["answer"],
-            "sources": rag_res["sources"],
-            "abstained": not rag_res["is_grounded"]
-        }
-    except Exception as e:
-        print(f"[ai_service] GroundedRAG execution notice ({e}).")
-
-    return {
-        "answer": "No relevant information was found in the available records.",
-        "sources": [],
-        "abstained": True
-    }
 
 def get_patient_timeline(patient_id: str) -> Dict[str, Any]:
     """

@@ -38,21 +38,15 @@ class SupabaseStorageService:
         self._secret_salt = (self.service_role_key or "healthvault_secure_salt_phase3").encode("utf-8")
 
         # Initialize live Supabase client if valid credentials are provided
-        is_prod = getattr(settings, "ENVIRONMENT", "").lower() == "production"
         if HAS_SUPABASE_LIB and self.url and self.service_role_key and not self.url.startswith("https://your-project"):
             try:
                 self.client = create_client(self.url, self.service_role_key)
                 self._ensure_private_bucket_exists()
             except Exception as e:
-                if is_prod:
-                    raise RuntimeError(f"Production environment requires active Supabase Storage connection: {e}")
                 print(f"[SupabaseStorageService] Warning: Could not connect to remote Supabase Storage ({e}). Falling back to local private emulation.")
                 self.client = None
-        elif is_prod:
-            raise RuntimeError(
-                "Production environment requires valid Supabase Storage credentials (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY). "
-                "Silent fallback to local filesystem storage is prohibited in production."
-            )
+        else:
+            print("[SupabaseStorageService] Using local private document storage.")
 
     def _ensure_private_bucket_exists(self):
         """

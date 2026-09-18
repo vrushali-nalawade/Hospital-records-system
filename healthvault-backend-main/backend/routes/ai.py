@@ -65,7 +65,7 @@ def query_patient_ai(
     log_access(db, current_user.id, canonical_id, "AI_QUERY", "ALLOWED")
     
     # 2. Call Qdrant hybrid retrieval + RAG pipeline
-    result = ask_patient_question(canonical_id, question)
+    result = ask_patient_question(canonical_id, question, document_id=query_in.document_id)
     return result
 
 @router.get("/timeline/{patient_id}", response_model=TimelineResponse)

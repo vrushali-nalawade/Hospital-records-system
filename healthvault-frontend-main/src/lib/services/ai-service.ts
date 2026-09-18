@@ -71,7 +71,8 @@ async function getAuthHeaders() {
 
 export async function askAIAboutRecords(
   question: string,
-  records: MedicalRecord[]
+  records: MedicalRecord[],
+  selectedDocumentId?: string
 ): Promise<{ answer: string; sourceRecordIds: string[] }> {
   // Real API RAG query flow
   if (!IS_DEMO_MODE) {
@@ -84,19 +85,25 @@ export async function askAIAboutRecords(
           try {
             const session = JSON.parse(raw);
             if (session.patientId) patientId = session.patientId;
+            else if (session.uid && session.uid.startsWith("P")) patientId = session.uid;
           } catch (e) {
             console.error(e);
           }
         }
       }
       
+      const payload: Record<string, any> = {
+        patient_id: patientId,
+        question: question
+      };
+      if (selectedDocumentId) {
+        payload.document_id = selectedDocumentId;
+      }
+      
       const res = await fetch(`${API_URL}/ai/query`, {
         method: "POST",
         headers,
-        body: JSON.stringify({
-          patient_id: patientId,
-          question: question
-        })
+        body: JSON.stringify(payload)
       });
       
       if (res.ok) {
@@ -120,18 +127,28 @@ export async function askAIAboutRecords(
   }
 
   // ---- DEMO AI (mock) fallback logic below ----
-  await new Promise((res) => setTimeout(res, 700));
+  await new Promise((res) => setTimeout(res, 600));
+
+  if (selectedDocumentId) {
+    const targetDoc = records.find((r) => r.recordId === selectedDocumentId);
+    if (targetDoc) {
+      return {
+        answer: `### Analysis for Document \`${targetDoc.recordId}\` (${recordTypeLabel[targetDoc.recordType]}):\n\n${summarizeRecord(targetDoc)}\n\n_Extracted directly from selected medical record._`,
+        sourceRecordIds: [targetDoc.recordId]
+      };
+    }
+  }
 
   const sorted = [...records].sort((a, b) =>
     a.createdAt < b.createdAt ? 1 : -1
   );
-  const lower = userQuestion.toLowerCase();
+  const lower = question.toLowerCase();
 
-  if (lower.includes("blood report") || lower.includes("blood")) {
-    const rec = sorted.find((r) => r.recordType === "blood_report");
+  if (lower.includes("blood report") || lower.includes("blood") || lower.includes("hba1c") || lower.includes("glucose")) {
+    const rec = sorted.find((r) => r.recordType === "blood_report" || r.recordType === "lab_report");
     if (rec) {
       return {
-        answer: `Here's what's in your latest blood report:\n\n${summarizeRecord(
+        answer: `Here's what's in your latest lab/blood report:\n\n${summarizeRecord(
           rec
         )}\n\n_This is a summary of the values already present in your uploaded document, for your understanding only._`,
         sourceRecordIds: [rec.recordId],
@@ -139,7 +156,7 @@ export async function askAIAboutRecords(
     }
   }
 
-  if (lower.includes("prescription")) {
+  if (lower.includes("prescription") || lower.includes("medication") || lower.includes("cardiology") || lower.includes("medicine")) {
     const rec = sorted.find((r) => r.recordType === "prescription");
     if (rec) {
       return {
@@ -161,6 +178,14 @@ export async function askAIAboutRecords(
         sourceRecordIds: [rec.recordId],
       };
     }
+  }
+
+  if (sorted.length > 0) {
+    const summaries = sorted.slice(0, 3).map((r) => summarizeRecord(r)).join("\n\n---\n\n");
+    return {
+      answer: `Here is a summary of your recent health records:\n\n${summaries}`,
+      sourceRecordIds: sorted.slice(0, 3).map((r) => r.recordId),
+    };
   }
 
   return {

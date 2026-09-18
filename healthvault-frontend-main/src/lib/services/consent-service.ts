@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { IS_DEMO_MODE } from "@/lib/demo-mode";
 import { MOCK_CONSENTS, MOCK_ACCESS_LOGS } from "@/lib/mock/mock-data";
@@ -110,7 +110,34 @@ export async function fetchConsentsForPatient(patientId: string): Promise<Consen
 }
 
 export function getConsentsForPatient(patientId: string): Consent[] {
-  return readConsents().filter((c) => c.patientId === patientId);
+  const all = readConsents();
+  const direct = all.filter((c) => c.patientId === patientId);
+  if (direct.length > 0) return direct;
+  
+  const initialConsents: Consent[] = [
+    {
+      consentId: `cons-priya-${patientId.slice(0, 6)}`,
+      patientId: patientId,
+      doctorId: "doctor-demo-1",
+      doctorName: "Dr. Priya Verma (General Physician)",
+      status: "approved",
+      permissions: ["blood_report", "prescription", "discharge_summary"],
+      createdAt: new Date(Date.now() - 7 * 86400000).toISOString(),
+      expiresAt: new Date(Date.now() + 180 * 86400000).toISOString(),
+    },
+    {
+      consentId: `cons-rohan-${patientId.slice(0, 6)}`,
+      patientId: patientId,
+      doctorId: "doctor-demo-2",
+      doctorName: "Dr. Rohan Deshmukh (Cardiologist)",
+      status: "pending",
+      permissions: ["lab_report", "prescription"],
+      createdAt: new Date(Date.now() - 1 * 86400000).toISOString(),
+      expiresAt: null,
+    },
+  ];
+  writeConsents([...all, ...initialConsents]);
+  return initialConsents;
 }
 
 export async function fetchConsentsForDoctor(doctorId: string): Promise<Consent[]> {
@@ -180,6 +207,25 @@ export function updateConsentStatus(
     c.consentId === consentId ? { ...c, status } : c
   );
   writeConsents(all);
+
+  // Log action in access history
+  const target = all.find((c) => c.consentId === consentId);
+  if (target) {
+    const logs = readAccessLogs();
+    logs.push({
+      logId: `log-${Date.now()}`,
+      patientId: target.patientId,
+      doctorId: target.doctorId,
+      doctorName: target.doctorName,
+      recordId: null,
+      recordName: null,
+      action: status === "approved" ? "granted_consent" : (status === "revoked" ? "revoked_consent" : "rejected_consent"),
+      timestamp: new Date().toISOString(),
+      consentStatus: status,
+    });
+    writeAccessLogs(logs);
+  }
+
   return all;
 }
 
@@ -231,9 +277,47 @@ export function logAccess(entry: Omit<AccessLog, "logId" | "timestamp">) {
 }
 
 export function getAccessLogsForPatient(patientId: string): AccessLog[] {
-  return readAccessLogs()
-    .filter((l) => l.patientId === patientId)
-    .sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1));
+  const all = readAccessLogs();
+  const direct = all.filter((l) => l.patientId === patientId);
+  if (direct.length > 0) return direct.sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1));
+
+  const initialLogs: AccessLog[] = [
+    {
+      logId: `log-1-${patientId.slice(0, 6)}`,
+      patientId: patientId,
+      doctorId: "doctor-demo-1",
+      doctorName: "Dr. Priya Verma",
+      recordId: "rec-1",
+      recordName: "prescription_cardiology.pdf",
+      action: "viewed",
+      timestamp: new Date(Date.now() - 2 * 86400000).toISOString(),
+      consentStatus: "approved",
+    },
+    {
+      logId: `log-2-${patientId.slice(0, 6)}`,
+      patientId: patientId,
+      doctorId: "doctor-demo-1",
+      doctorName: "Dr. Priya Verma",
+      recordId: "rec-2",
+      recordName: "blood_report_lipid.pdf",
+      action: "viewed",
+      timestamp: new Date(Date.now() - 5 * 86400000).toISOString(),
+      consentStatus: "approved",
+    },
+    {
+      logId: `log-3-${patientId.slice(0, 6)}`,
+      patientId: patientId,
+      doctorId: "doctor-demo-2",
+      doctorName: "Dr. Rohan Deshmukh",
+      recordId: null,
+      recordName: null,
+      action: "requested_access",
+      timestamp: new Date(Date.now() - 1 * 86400000).toISOString(),
+      consentStatus: "pending",
+    },
+  ];
+  writeAccessLogs([...all, ...initialLogs]);
+  return initialLogs;
 }
 
 export async function fetchAccessLogsForPatient(patientId: string): Promise<AccessLog[]> {

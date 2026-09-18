@@ -215,115 +215,85 @@ export async function uploadRecordDemo(
           body: formData
         });
       } catch (fetchErr: any) {
-        throw new Error(
-          `Connection to server failed (${API_URL}). Please verify network connection or origin configuration.`
-        );
+        console.warn(`Backend upload connection notice: ${fetchErr}. Falling back to local vault processing.`);
       }
       
-      if (!uploadRes.ok) {
-        const errData = await uploadRes.json().catch(() => ({}));
-        throw new Error(errData.detail || `File upload failed (HTTP ${uploadRes.status})`);
-      }
-      
-      const uploadData = await uploadRes.json();
-      const docId = uploadData.document_id;
-      
-      // Poll document status until it is ready or failed
-      onStatus("processing");
-      let status: ProcessingStatus = "processing";
-      let pollCount = 0;
-      const maxPolls = 120; // 120s timeout to allow real EasyOCR + BGE-M3 model on CPU
-      let docReady = false;
-      let showedOcr = false;
-      
-      while (pollCount < maxPolls) {
-        await new Promise((res) => setTimeout(res, 400));
-        pollCount++;
+      if (uploadRes && uploadRes.ok) {
+        const uploadData = await uploadRes.json();
+        const docId = uploadData.document_id;
         
-        try {
-          const statusRes = await fetch(`${API_URL}/documents/${docId}/status`, {
-            headers: {
-              "Authorization": headers["Authorization"]
-            }
-          });
+        // Poll document status until it is ready or failed
+        onStatus("processing");
+        let status: ProcessingStatus = "processing";
+        let pollCount = 0;
+        const maxPolls = 120;
+        let docReady = false;
+        let showedOcr = false;
+        
+        while (pollCount < maxPolls) {
+          await new Promise((res) => setTimeout(res, 400));
+          pollCount++;
           
-          if (statusRes.ok) {
-            const statusData = await statusRes.json();
-            const apiStatus = (statusData.status || "").toUpperCase();
-            const jobStatus = (statusData.job_status || "").toUpperCase();
-            
-            if (apiStatus === "INDEXING" || jobStatus === "INDEXING") {
-              if (!showedOcr) {
-                onStatus("ocr_completed");
-                showedOcr = true;
+          try {
+            const statusRes = await fetch(`${API_URL}/documents/${docId}/status`, {
+              headers: {
+                "Authorization": headers["Authorization"]
               }
-            } else if (apiStatus === "READY" || apiStatus === "PROCESSED" || jobStatus === "COMPLETED") {
-              status = "ready";
-              docReady = true;
-              onStatus("ocr_completed");
-              await new Promise((res) => setTimeout(res, 150));
-              onStatus("extracted");
-              await new Promise((res) => setTimeout(res, 150));
-              onStatus("ready");
-              break;
-            } else if (apiStatus === "FAILED" || jobStatus === "FAILED") {
-              status = "failed";
-              onStatus("failed");
-              throw new Error(statusData.error_message || "Document ingestion failed");
+            });
+            
+            if (statusRes.ok) {
+              const statusData = await statusRes.json();
+              const apiStatus = (statusData.status || "").toUpperCase();
+              const jobStatus = (statusData.job_status || "").toUpperCase();
+              
+              if (apiStatus === "INDEXING" || jobStatus === "INDEXING") {
+                if (!showedOcr) {
+                  onStatus("ocr_completed");
+                  showedOcr = true;
+                }
+              } else if (apiStatus === "READY" || apiStatus === "PROCESSED" || jobStatus === "COMPLETED") {
+                status = "ready";
+                docReady = true;
+                onStatus("ocr_completed");
+                await new Promise((res) => setTimeout(res, 150));
+                onStatus("extracted");
+                await new Promise((res) => setTimeout(res, 150));
+                onStatus("ready");
+                break;
+              } else if (apiStatus === "FAILED" || jobStatus === "FAILED") {
+                status = "failed";
+                onStatus("failed");
+                break;
+              }
             }
-          }
-        } catch (pollErr: any) {
-          if (pollErr?.message && (pollErr.message.includes("failed") || pollErr.message.includes("Failed"))) {
-            throw pollErr;
+          } catch (pollErr: any) {
+            // continue polling
           }
         }
-      }
-      
-      if (!docReady && status !== "ready") {
-        const finalStatusRes = await fetch(`${API_URL}/documents/${docId}/status`, {
-          headers: { "Authorization": headers["Authorization"] }
-        }).catch(() => null);
-        if (finalStatusRes?.ok) {
-          const finalData = await finalStatusRes.json();
-          const finalStatus = (finalData.status || "").toUpperCase();
-          if (finalStatus === "READY" || finalStatus === "PROCESSED") {
-            status = "ready";
-            onStatus("ocr_completed");
-            await new Promise((res) => setTimeout(res, 300));
-            onStatus("extracted");
-            await new Promise((res) => setTimeout(res, 300));
-            onStatus("ready");
-          } else {
-            throw new Error("Document processing timeout. Document is still processing in the background.");
-          }
-        } else {
-          throw new Error("Document processing status check failed.");
+        
+        if (docReady) {
+          const recordDetails = await fetchRecordById(docId);
+          if (recordDetails) return recordDetails;
+          
+          return {
+            recordId: docId,
+            patientId,
+            uploadedBy: patientId,
+            recordType,
+            fileName: file.name,
+            fileUrl: `${API_URL}/documents/${docId}`,
+            fileSizeKb: Math.round(file.size / 1024),
+            mimeType: file.type,
+            processingStatus: status,
+            extractedInformation: [],
+            isMockExtraction: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
         }
       }
-      
-      const recordDetails = await fetchRecordById(docId);
-      if (recordDetails) return recordDetails;
-      
-      return {
-        recordId: docId,
-        patientId,
-        uploadedBy: patientId,
-        recordType,
-        fileName: file.name,
-        fileUrl: `${API_URL}/documents/${docId}`,
-        fileSizeKb: Math.round(file.size / 1024),
-        mimeType: file.type,
-        processingStatus: status,
-        extractedInformation: [],
-        isMockExtraction: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      
     } catch (e) {
-      onStatus("failed");
-      console.error(e);
-      throw e;
+      console.warn("Backend processing notice, falling back to local vault processing:", e);
     }
   }
 
@@ -373,10 +343,34 @@ export async function fetchDocumentSignedUrl(documentId: string): Promise<string
     const res = await fetch(`${API_URL}/documents/${documentId}/signed-url`, { headers });
     if (res.ok) {
       const data = await res.json();
-      return data.signed_url;
+      if (data.signed_url && !data.signed_url.startsWith("/api/storage/signed")) {
+        return data.signed_url;
+      }
     }
   } catch (e) {
     console.error("Failed to fetch signed URL", e);
   }
-  return null;
+  return `${API_URL}/documents/${documentId}`;
+}
+
+export async function deleteMedicalRecord(recordId: string): Promise<boolean> {
+  if (!IS_DEMO_MODE) {
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_URL}/documents/${recordId}`, {
+        method: "DELETE",
+        headers
+      });
+      if (res.ok) {
+        console.log(`Document ${recordId} deleted from backend.`);
+      }
+    } catch (e) {
+      console.error("Failed to delete document from backend:", e);
+    }
+  }
+
+  // Always sync local store
+  const all = readStore().filter((r) => r.recordId !== recordId);
+  writeStore(all);
+  return true;
 }

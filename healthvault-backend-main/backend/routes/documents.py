@@ -50,14 +50,35 @@ async def upload_document(
         patient = db.query(Patient).filter(Patient.user_id == current_user.id).first()
         if not patient and patient_id:
             patient = db.query(Patient).filter(Patient.id == patient_id).first()
+            
         if not patient:
-            count = db.query(Patient).count()
-            canonical_patient_id = f"P{count + 1:03d}"
             name = current_user.email.split("@")[0].capitalize() if current_user.email else "Patient"
-            patient = Patient(id=canonical_patient_id, user_id=current_user.id, name=name)
-            db.add(patient)
-            db.commit()
-            db.refresh(patient)
+            # Try finding an unused canonical ID (P001, P002, ...) or generate a safe unique ID
+            pid_idx = max(db.query(Patient).count(), 1)
+            candidate_id = f"P{pid_idx:03d}"
+            while db.query(Patient).filter(Patient.id == candidate_id).first():
+                pid_idx += 1
+                candidate_id = f"P{pid_idx:03d}"
+                
+            try:
+                patient = Patient(id=candidate_id, user_id=current_user.id, name=name)
+                db.add(patient)
+                db.commit()
+                db.refresh(patient)
+                canonical_patient_id = patient.id
+            except Exception as pe:
+                db.rollback()
+                # Check if patient was created by concurrent request or fallback to unique ID
+                patient = db.query(Patient).filter(Patient.user_id == current_user.id).first()
+                if patient:
+                    canonical_patient_id = patient.id
+                else:
+                    fallback_id = f"P_{uuid.uuid4().hex[:6].upper()}"
+                    patient = Patient(id=fallback_id, user_id=current_user.id, name=name)
+                    db.add(patient)
+                    db.commit()
+                    db.refresh(patient)
+                    canonical_patient_id = patient.id
         else:
             canonical_patient_id = patient.id
             
@@ -314,3 +335,47 @@ def get_original_document(
     media_type = MIME_MAP.get(ext.lower(), "application/octet-stream")
     
     return FileResponse(safe_path, media_type=media_type, filename=filename)
+
+@router.delete("/{document_id}")
+def delete_document(
+    document_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    doc = db.query(Document).filter(Document.document_id == document_id).first()
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found"
+        )
+        
+    patient_id = doc.patient_id
+    role = current_user.role.upper()
+    
+    # Only owner patient or ADMIN can delete
+    allowed = False
+    if role == "ADMIN":
+        allowed = True
+    elif role == "PATIENT":
+        patient = db.query(Patient).filter(Patient.user_id == current_user.id).first()
+        if patient and (patient.id == patient_id or patient.user_id == patient_id):
+            allowed = True
+        elif current_user.id == patient_id:
+            allowed = True
+            
+    if not allowed:
+        log_access(db, current_user.id, patient_id, "DOCUMENT_DELETE", "DENIED")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: only the patient can delete their own medical records"
+        )
+        
+    log_access(db, current_user.id, patient_id, "DOCUMENT_DELETE", "ALLOWED")
+    
+    # Clean up processing jobs
+    db.query(ProcessingJob).filter(ProcessingJob.document_id == document_id).delete()
+    db.delete(doc)
+    db.commit()
+    
+    return {"message": "Document deleted successfully", "document_id": document_id}
+
