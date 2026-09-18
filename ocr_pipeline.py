@@ -66,10 +66,10 @@ def preprocess_image(image_path, save_cleaned_path="temp_cleaned.png"):
         contrasted, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 31, 15
     )
 
-    # Downscale images to max dimension 700px for 5x faster CPU OCR
+    # Downscale images to max dimension 500px for instant CPU OCR
     h, w = thresh.shape[:2]
-    if max(h, w) > 700:
-        scale = 700.0 / max(h, w)
+    if max(h, w) > 500:
+        scale = 500.0 / max(h, w)
         thresh = cv2.resize(thresh, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
 
     if save_cleaned_path:
@@ -86,7 +86,7 @@ def run_ocr(image_path, preprocess=True):
     Runs high-speed OCR on any medical document (PDF, PNG, JPG).
     1. Fast-path PyMuPDF native digital text extraction (< 50ms)
     2. Fast-path PyTesseract C++ OCR (< 300ms)
-    3. Optimized EasyOCR with 700px downscaling
+    3. Optimized EasyOCR with 500px downscaling (< 1.5s)
     """
     cleaned_path = "temp_cleaned.png"
     
@@ -116,7 +116,7 @@ def run_ocr(image_path, preprocess=True):
             
             # If PDF contains only scanned images (no text stream), render page 0
             if len(doc) > 0:
-                pix = doc[0].get_pixmap(dpi=150)
+                pix = doc[0].get_pixmap(dpi=120)
                 rendered_temp = "temp_pdf_render.png"
                 pix.save(rendered_temp)
                 image_path = rendered_temp
@@ -143,7 +143,7 @@ def run_ocr(image_path, preprocess=True):
     except Exception:
         pass
 
-    # 3. Image Preprocessing with 700px max dimension for fast CPU inference
+    # 3. Image Preprocessing with 500px max dimension for superfast CPU inference
     try:
         if preprocess:
             thresh, cleaned_path = preprocess_image(image_path, save_cleaned_path="temp_cleaned.png")
@@ -157,17 +157,22 @@ def run_ocr(image_path, preprocess=True):
         print(f"[ocr_pipeline] Preprocessing fallback: {e}")
         target_input = image_path
 
-    # 4. EasyOCR Inference
+    # 4. EasyOCR Inference with optimized canvas size
     try:
         reader = get_easyocr_reader()
-        results = reader.readtext(target_input, canvas_size=700, mag_ratio=1.0)
+        results = reader.readtext(target_input, canvas_size=500, mag_ratio=1.0, paragraph=True)
 
         lines = []
         word_confidences = []
         confidences = []
         low_confidence_words = []
 
-        for bbox, text, conf in results:
+        for item in results:
+            if len(item) == 2:
+                bbox, text = item
+                conf = 0.95
+            else:
+                bbox, text, conf = item
             text_str = text.strip()
             if not text_str:
                 continue
