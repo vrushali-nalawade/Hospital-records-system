@@ -162,32 +162,45 @@ def get_embedding(text: str) -> List[float]:
             if settings.HF_API_TOKEN:
                 headers["Authorization"] = f"Bearer {settings.HF_API_TOKEN}"
             
-            # Support Gradio and FastAPI endpoints automatically
+            # Support Gradio 5 event stream, Gradio legacy, and FastAPI endpoints automatically
             candidate_endpoints = [
-                f"{base_url}/api/embed",
-                f"{base_url}/api/predict",
-                f"{base_url}/embed"
+                (f"{base_url}/gradio_api/call/embed", "gradio_sse"),
+                (f"{base_url}/api/embed", "gradio_json"),
+                (f"{base_url}/api/predict", "gradio_json"),
+                (f"{base_url}/embed", "fastapi")
             ]
             
-            for endpoint in candidate_endpoints:
+            for endpoint, proto in candidate_endpoints:
                 try:
-                    # 1. Try Gradio API format {"data": [text]}
-                    resp = requests.post(endpoint, json={"data": [text]}, headers=headers, timeout=15)
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        res_data = data.get("data", [])
-                        if res_data:
-                            vec = res_data[0] if isinstance(res_data[0], list) else res_data
-                            if isinstance(vec, list) and len(vec) == VECTOR_SIZE:
-                                return vec
-                    
-                    # 2. Try FastAPI format {"texts": [text]}
-                    resp = requests.post(endpoint, json={"texts": [text]}, headers=headers, timeout=15)
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        embeddings = data.get("embeddings", [])
-                        if embeddings and len(embeddings[0]) == VECTOR_SIZE:
-                            return embeddings[0]
+                    if proto == "gradio_sse":
+                        resp = requests.post(endpoint, json={"data": [text]}, headers=headers, timeout=10)
+                        if resp.status_code == 200:
+                            event_id = resp.json().get("event_id")
+                            if event_id:
+                                stream_res = requests.get(f"{base_url}/gradio_api/call/embed/{event_id}", headers=headers, timeout=30)
+                                for line in stream_res.text.splitlines():
+                                    if line.startswith("data: "):
+                                        payload = json.loads(line[6:])
+                                        if isinstance(payload, list) and payload:
+                                            vec = payload[0] if isinstance(payload[0], list) else payload
+                                            if len(vec) == VECTOR_SIZE:
+                                                return vec
+                    elif proto == "gradio_json":
+                        resp = requests.post(endpoint, json={"data": [text]}, headers=headers, timeout=15)
+                        if resp.status_code == 200:
+                            data = resp.json()
+                            res_data = data.get("data", [])
+                            if res_data:
+                                vec = res_data[0] if isinstance(res_data[0], list) else res_data
+                                if isinstance(vec, list) and len(vec) == VECTOR_SIZE:
+                                    return vec
+                    elif proto == "fastapi":
+                        resp = requests.post(endpoint, json={"texts": [text]}, headers=headers, timeout=15)
+                        if resp.status_code == 200:
+                            data = resp.json()
+                            embeddings = data.get("embeddings", [])
+                            if embeddings and len(embeddings[0]) == VECTOR_SIZE:
+                                return embeddings[0]
                 except Exception:
                     continue
         except Exception as e:
