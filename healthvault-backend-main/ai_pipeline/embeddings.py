@@ -202,8 +202,10 @@ def _get_process_rss_mb() -> float:
     return 0.0
 
 
-BF16_ARTIFACT_FILENAME = "bge_m3_dense_bf16.safetensors"
-
+try:
+    from backend.config import settings
+except Exception:
+    settings = None
 
 class MedicalEmbedder:
 
@@ -212,16 +214,17 @@ class MedicalEmbedder:
         self.hf_url = (
             hf_embedding_url or 
             os.getenv("HF_EMBEDDING_URL") or 
-            (getattr(settings, "HF_EMBEDDING_URL", None) if "settings" in globals() else None)
+            (getattr(settings, "HF_EMBEDDING_URL", None) if settings else None) or
+            "https://vrushalily-healthvault-ai.hf.space"
         )
-        self.hf_token = os.getenv("HF_API_TOKEN") or (getattr(settings, "HF_API_TOKEN", None) if "settings" in globals() else None)
+        self.hf_token = os.getenv("HF_API_TOKEN") or (getattr(settings, "HF_API_TOKEN", None) if settings else None)
         self.tokenizer = None
         self.model = None
 
-        if not self.hf_url:
-            self.model = self._get_or_load_model()
+        if self.hf_url:
+            print(f"[embeddings] Configured remote HF Space ZeroGPU embedding endpoint: {self.hf_url}")
         else:
-            print(f"[embeddings] Configured remote HF Space embedding endpoint: {self.hf_url}")
+            self.model = self._get_or_load_model()
 
     def _get_or_load_model(self):
         global _CACHED_MODEL, _CACHED_MODEL_NAME, _CACHED_TOKENIZER
@@ -300,11 +303,31 @@ class MedicalEmbedder:
         # 1. Use remote HF Space if configured
         if self.hf_url:
             import requests
+            import json
+            base_url = self.hf_url.strip().rstrip("/")
             headers = {"Content-Type": "application/json"}
             if self.hf_token:
                 headers["Authorization"] = f"Bearer {self.hf_token}"
+            
+            # Try Gradio SSE, Gradio JSON, and FastAPI endpoints
             try:
-                res = requests.post(self.hf_url, json={"texts": [text]}, headers=headers, timeout=20)
+                sse_res = requests.post(f"{base_url}/gradio_api/call/embed", json={"data": [text]}, headers=headers, timeout=10)
+                if sse_res.status_code == 200:
+                    event_id = sse_res.json().get("event_id")
+                    if event_id:
+                        stream_res = requests.get(f"{base_url}/gradio_api/call/embed/{event_id}", headers=headers, timeout=30)
+                        for line in stream_res.text.splitlines():
+                            if line.startswith("data: "):
+                                payload = json.loads(line[6:])
+                                if isinstance(payload, list) and payload:
+                                    vec = payload[0] if isinstance(payload[0], list) else payload
+                                    if len(vec) == EMBEDDING_DIM:
+                                        return vec
+            except Exception:
+                pass
+
+            try:
+                res = requests.post(f"{base_url}/embed", json={"texts": [text]}, headers=headers, timeout=20)
                 if res.status_code == 200:
                     data = res.json()
                     embeddings = data.get("embeddings", data)
@@ -347,16 +370,27 @@ class MedicalEmbedder:
         # 1. Use remote HF Space if configured
         if self.hf_url:
             import requests
+            base_url = self.hf_url.strip().rstrip("/")
             headers = {"Content-Type": "application/json"}
             if self.hf_token:
                 headers["Authorization"] = f"Bearer {self.hf_token}"
             try:
-                res = requests.post(self.hf_url, json={"texts": formatted_texts}, headers=headers, timeout=60)
+                res = requests.post(f"{base_url}/embed", json={"texts": formatted_texts}, headers=headers, timeout=60)
                 if res.status_code == 200:
                     data = res.json()
                     embeddings = data.get("embeddings", data)
                     if isinstance(embeddings, list) and len(embeddings) == len(formatted_texts):
                         return embeddings
+            except Exception:
+                pass
+            
+            # Per-item SSE fallback
+            try:
+                results = []
+                for t in formatted_texts:
+                    results.append(self.embed_text(t))
+                if len(results) == len(formatted_texts):
+                    return results
             except Exception as e:
                 print(f"[embeddings] Remote HF batch embed request failed: {e}. Falling back to local embedder.")
                 if self.model is None:
