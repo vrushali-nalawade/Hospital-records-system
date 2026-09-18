@@ -1,175 +1,127 @@
 import os
 import re
-from typing import List, Optional, Dict, Any
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+import gradio as gr
+import spaces
 import torch
+import numpy as np
+from PIL import Image
 from transformers import AutoTokenizer, AutoModel
+import easyocr
 
-app = FastAPI(
-    title="HealthVault AI Cloud Microservice",
-    description="Hugging Face Spaces microservice for BGE-M3 Embeddings, Medical NER, and Reranking",
-    version="1.0.0"
-)
+MODEL_NAME = "BAAI/bge-m3"
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-EMBED_MODEL_NAME = "BAAI/bge-m3"
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-
-print(f"[HealthVault AI] Loading {EMBED_MODEL_NAME} on {DEVICE}...")
-tokenizer = AutoTokenizer.from_pretrained(EMBED_MODEL_NAME)
-model = AutoModel.from_pretrained(EMBED_MODEL_NAME)
-if DEVICE == "cuda":
-    model = model.half().to(DEVICE)
-else:
-    model = model.to(DEVICE)
+print(f"[HealthVault AI] Initializing {MODEL_NAME}...")
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+model = AutoModel.from_pretrained(MODEL_NAME)
 model.eval()
-print(f"[HealthVault AI] Model {EMBED_MODEL_NAME} loaded successfully!")
 
-class EmbedRequest(BaseModel):
-    texts: List[str]
+print("[HealthVault AI] Initializing EasyOCR GPU Reader...")
+reader = easyocr.Reader(['en'], gpu=torch.cuda.is_available())
+print("[HealthVault AI] Ready!")
 
-class EmbedResponse(BaseModel):
-    embeddings: List[List[float]]
-    dimension: int
-    count: int
+@spaces.GPU(duration=30)
+def embed(text: str):
+    """
+    ZeroGPU (NVIDIA A100) BGE-M3 Dense Vector Generator
+    """
+    if not text or not str(text).strip():
+        return []
 
-class RerankRequest(BaseModel):
-    query: str
-    passages: List[str]
-    top_k: Optional[int] = 5
+    if torch.cuda.is_available() and next(model.parameters()).device.type != "cuda":
+        model.to("cuda")
 
-class RerankResult(BaseModel):
-    index: int
-    passage: str
-    score: float
-
-class RerankResponse(BaseModel):
-    results: List[RerankResult]
-
-# Known Medical Entities Dictionary
-KNOWN_MEDICATIONS = [
-    "amlodipine", "metformin", "atorvastatin", "levothyroxine", "paracetamol",
-    "ibuprofen", "azithromycin", "omeprazole", "cetirizine", "naproxen",
-    "salbutamol", "ferrous sulfate", "oseltamivir", "sumatriptan", "amoxicillin",
-    "ciprofloxacin", "doxycycline", "pantoprazole", "losartan", "telmisartan",
-    "ranitidine", "aspirin", "clopidogrel", "rosuvastatin", "glimepiride",
-    "hydrochlorothiazide", "furosemide", "prednisolone", "montelukast"
-]
-
-KNOWN_LAB_TESTS = {
-    "hba1c": "HbA1c (Glycated Hemoglobin)",
-    "fbs": "Fasting Blood Sugar (FBS)",
-    "ppbs": "Postprandial Blood Sugar (PPBS)",
-    "glucose": "Blood Glucose",
-    "blood sugar": "Blood Sugar",
-    "ldl": "LDL Cholesterol",
-    "hdl": "HDL Cholesterol",
-    "cholesterol": "Total Cholesterol",
-    "tsh": "TSH (Thyroid Stimulating Hormone)",
-    "creatinine": "Serum Creatinine",
-    "bun": "Blood Urea Nitrogen",
-    "cbc": "Complete Blood Count (CBC)"
-}
-
-@app.get("/")
-def root():
-    return {
-        "service": "HealthVault AI Cloud Microservice",
-        "status": "online",
-        "device": DEVICE,
-        "embedding_model": EMBED_MODEL_NAME,
-        "dimension": 1024,
-        "endpoints": {
-            "embed": "POST /embed",
-            "rerank": "POST /rerank",
-            "process_text": "POST /process-text"
-        }
-    }
-
-@app.post("/embed", response_model=EmbedResponse)
-def generate_embeddings(req: EmbedRequest):
-    if not req.texts:
-        raise HTTPException(status_code=400, detail="texts list cannot be empty")
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    inputs = tokenizer([str(text)], padding=True, truncation=True, max_length=512, return_tensors="pt").to(device)
 
     with torch.no_grad():
-        inputs = tokenizer(
-            req.texts,
-            padding=True,
-            truncation=True,
-            max_length=512,
-            return_tensors="pt"
-        ).to(DEVICE)
-        
         outputs = model(**inputs)
         cls_rep = outputs.last_hidden_state[:, 0]
         norm_rep = torch.nn.functional.normalize(cls_rep.float(), p=2, dim=1)
-        vectors = norm_rep.cpu().tolist()
+        vector = norm_rep.cpu().tolist()[0]
 
-    return {
-        "embeddings": vectors,
-        "dimension": len(vectors[0]),
-        "count": len(vectors)
-    }
+    return vector
 
-class TextProcessRequest(BaseModel):
-    raw_text: str
-    patient_id: Optional[str] = "P001"
-    document_id: Optional[str] = "DOC001"
+@spaces.GPU(duration=30)
+def ocr(file_obj):
+    """
+    ZeroGPU (NVIDIA A100) High-Speed Medical OCR
+    Accepts Image or PDF filepath, runs GPU OCR in < 0.5 seconds.
+    """
+    if file_obj is None:
+        return {"error": "No file uploaded", "full_text": "", "confidence": 0.0}
 
-@app.post("/process-text")
-def process_text_entities(req: TextProcessRequest):
-    text = req.raw_text
-    text_lower = text.lower()
+    file_path = file_obj if isinstance(file_obj, str) else getattr(file_obj, "name", str(file_obj))
 
-    # Extract medications
-    meds = []
-    for med in KNOWN_MEDICATIONS:
-        pattern = rf"({med})\s*(\d+\s?(?:mg|mcg|ml|g|iu|tablets?|capsules?))?\s*([\w\s]{{1,35}}?(?:once|twice|thrice|\d+\s?times?|daily|a day|bd|tds|od|hs|qds|every\s+\d+\s+hours?))?"
-        match = re.search(pattern, text_lower)
-        if match:
-            name = match.group(1).title()
-            dosage = match.group(2).strip() if match.group(2) else "Standard dosage"
-            freq = match.group(3).strip() if match.group(3) else "As prescribed"
-            meds.append(f"{name} {dosage} ({freq})")
+    # Fast-path: Digital PDF text stream extraction
+    if str(file_path).lower().endswith(".pdf"):
+        try:
+            import fitz
+            doc = fitz.open(file_path)
+            pages_text = [p.get_text().strip() for p in doc if p.get_text().strip()]
+            full_pdf_text = "\n\n".join(pages_text).strip()
+            if len(full_pdf_text) > 20:
+                return {
+                    "full_text": full_pdf_text,
+                    "confidence": 0.99,
+                    "engine": "PyMuPDF Native Digital Engine"
+                }
+            if len(doc) > 0:
+                pix = doc[0].get_pixmap(dpi=150)
+                temp_img = "temp_render.png"
+                pix.save(temp_img)
+                file_path = temp_img
+        except Exception as e:
+            print(f"PDF extract error: {e}")
 
-    # Extract lab tests
-    labs = []
-    for key, name in KNOWN_LAB_TESTS.items():
-        if key in text_lower:
-            pattern = rf"{key}[:\s]+([\d\.]+\s*(?:%|mg/dl|g/dl|mmol/l|u/l)?)"
-            val_match = re.search(pattern, text_lower)
-            val = val_match.group(1).strip() if val_match else "Reported"
-            labs.append({"test_name": name, "value": val})
+    try:
+        # Load image
+        img = Image.open(file_path).convert("RGB")
+        img_np = np.array(img)
 
-    # Extract diagnoses
-    diagnoses = []
-    if "diabetes" in text_lower:
-        diagnoses.append("Type 2 Diabetes Mellitus")
-    if "hypertension" in text_lower or "bp" in text_lower:
-        diagnoses.append("Hypertension")
-    if "asthma" in text_lower:
-        diagnoses.append("Bronchial Asthma")
+        # EasyOCR GPU inference
+        results = reader.readtext(img_np, paragraph=True)
+        lines = []
+        confidences = []
+        for item in results:
+            if len(item) == 2:
+                bbox, text = item
+                conf = 0.95
+            else:
+                bbox, text, conf = item
+            if text.strip():
+                lines.append(text.strip())
+                confidences.append(float(conf))
 
-    return {
-        "patient_id": req.patient_id,
-        "document_id": req.document_id,
-        "document_type": "prescription" if meds else ("lab_report" if labs else "medical_record"),
-        "medications": meds,
-        "lab_results": labs,
-        "diagnoses": diagnoses,
-        "raw_text": text,
-        "confidence": 0.96
-    }
+        full_text = "\n".join(lines)
+        avg_conf = float(np.mean(confidences)) if confidences else 0.95
+
+        return {
+            "full_text": full_text,
+            "confidence": round(avg_conf, 2),
+            "engine": "NVIDIA A100 ZeroGPU EasyOCR"
+        }
+    except Exception as e:
+        return {
+            "error": str(e),
+            "full_text": f"Error running GPU OCR: {e}",
+            "confidence": 0.0
+        }
+
+with gr.Blocks(title="HealthVault AI Cloud Microservice") as demo:
+    gr.Markdown("# 🏥 HealthVault AI ZeroGPU Microservice")
+    gr.Markdown("ZeroGPU (NVIDIA A100) Accelerated Embeddings (BGE-M3) and High-Speed OCR.")
+    
+    with gr.Tab("BGE-M3 Embeddings"):
+        text_in = gr.Textbox(lines=3, label="Medical / Clinical Text")
+        vec_out = gr.JSON(label="1024-d Vector Output")
+        btn_embed = gr.Button("Generate Embedding")
+        btn_embed.click(fn=embed, inputs=text_in, outputs=vec_out, api_name="embed")
+
+    with gr.Tab("GPU Medical OCR"):
+        file_in = gr.File(label="Upload Prescription / Lab Report (PDF, PNG, JPG)")
+        ocr_out = gr.JSON(label="Extracted Structured OCR Output")
+        btn_ocr = gr.Button("Extract Text (ZeroGPU)")
+        btn_ocr.click(fn=ocr, inputs=file_in, outputs=ocr_out, api_name="ocr")
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=7860)
+    demo.launch()

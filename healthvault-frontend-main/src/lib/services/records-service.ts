@@ -237,7 +237,7 @@ export async function uploadRecordDemo(
       let showedOcr = false;
       
       while (pollCount < maxPolls) {
-        await new Promise((res) => setTimeout(res, 1000));
+        await new Promise((res) => setTimeout(res, 400));
         pollCount++;
         
         try {
@@ -261,9 +261,9 @@ export async function uploadRecordDemo(
               status = "ready";
               docReady = true;
               onStatus("ocr_completed");
-              await new Promise((res) => setTimeout(res, 400));
+              await new Promise((res) => setTimeout(res, 150));
               onStatus("extracted");
-              await new Promise((res) => setTimeout(res, 400));
+              await new Promise((res) => setTimeout(res, 150));
               onStatus("ready");
               break;
             } else if (apiStatus === "FAILED" || jobStatus === "FAILED") {
