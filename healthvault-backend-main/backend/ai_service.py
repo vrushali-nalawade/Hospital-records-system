@@ -157,28 +157,41 @@ def get_embedding(text: str) -> List[float]:
     # 1. Hugging Face Spaces Remote Microservice Fast-Path
     if settings.HF_EMBEDDING_URL:
         try:
-            embed_url = settings.HF_EMBEDDING_URL.strip().rstrip("/")
-            if not embed_url.endswith("/embed"):
-                embed_url = f"{embed_url}/embed"
-                
+            base_url = settings.HF_EMBEDDING_URL.strip().rstrip("/")
             headers = {}
             if settings.HF_API_TOKEN:
                 headers["Authorization"] = f"Bearer {settings.HF_API_TOKEN}"
-            resp = requests.post(
-                embed_url,
-                json={"texts": [text]},
-                headers=headers,
-                timeout=15
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                embeddings = data.get("embeddings", [])
-                if embeddings and len(embeddings[0]) == VECTOR_SIZE:
-                    return embeddings[0]
-            else:
-                print(f"[ai_service] HF Space returned status {resp.status_code}: {resp.text}")
+            
+            # Support Gradio and FastAPI endpoints automatically
+            candidate_endpoints = [
+                f"{base_url}/api/embed",
+                f"{base_url}/api/predict",
+                f"{base_url}/embed"
+            ]
+            
+            for endpoint in candidate_endpoints:
+                try:
+                    # 1. Try Gradio API format {"data": [text]}
+                    resp = requests.post(endpoint, json={"data": [text]}, headers=headers, timeout=15)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        res_data = data.get("data", [])
+                        if res_data:
+                            vec = res_data[0] if isinstance(res_data[0], list) else res_data
+                            if isinstance(vec, list) and len(vec) == VECTOR_SIZE:
+                                return vec
+                    
+                    # 2. Try FastAPI format {"texts": [text]}
+                    resp = requests.post(endpoint, json={"texts": [text]}, headers=headers, timeout=15)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        embeddings = data.get("embeddings", [])
+                        if embeddings and len(embeddings[0]) == VECTOR_SIZE:
+                            return embeddings[0]
+                except Exception:
+                    continue
         except Exception as e:
-            print(f"[ai_service] Hugging Face Space embedding request failed: {e}. Falling back to local embedder.")
+            print(f"[ai_service] Hugging Face Space embedding request notice: {e}. Falling back to local embedder.")
 
     # 2. Local BGE-M3 Execution
     global _real_embedder
