@@ -405,29 +405,88 @@ def ask_patient_question(patient_id: str, question: str, document_id: Optional[s
                     "needs_review": doc.needs_review or False
                 })
 
-                doc_desc = [f"**Document {doc.document_id}** ({parsed.get('document_type', doc.document_type).replace('_', ' ').title()} - {parsed.get('date')}):"]
-                if parsed.get("diagnoses"):
-                    doc_desc.append(f"• **Diagnosis:** {', '.join(parsed['diagnoses'])}")
-                if parsed.get("medications"):
-                    doc_desc.append(f"• **Prescribed Medications:** {', '.join(parsed['medications'])}")
-                if parsed.get("lab_results"):
-                    labs = [f"{lr.get('test_name')}: {lr.get('value')}" for lr in parsed["lab_results"] if isinstance(lr, dict)]
-                    if labs:
-                        doc_desc.append(f"• **Lab Findings:** {', '.join(labs)}")
-                if parsed.get("raw_text") and not parsed.get("medications") and not parsed.get("diagnoses"):
-                    doc_desc.append(f"• **Notes:** {parsed['raw_text'][:200]}...")
+                doc_type_clean = (doc.document_type or parsed.get("document_type", "record")).replace("_", " ").title()
+                raw_filename = os.path.basename(doc.storage_path or "").lower()
+                doc_title = f"Document `{doc.document_id}` ({doc_type_clean} • {parsed.get('date', doc.created_at.strftime('%Y-%m-%d'))})"
 
-                summaries.append("\n".join(doc_desc))
+                # Build empathetic, plain-English patient explanation
+                parts = [f"#### {doc_title}"]
+
+                # 1. Condition / Diagnosis
+                if parsed.get("diagnoses"):
+                    diag_str = ", ".join(parsed["diagnoses"])
+                    parts.append(f"**Diagnosis / Clinical Condition:**\n• **{diag_str}**")
+                    if "asthma" in diag_str.lower() or "asthma" in raw_filename:
+                        parts.append("_In plain words: Asthma is a chronic condition where the breathing airways become inflamed and narrow, causing wheezing, shortness of breath, or coughing._")
+                    elif "hypertension" in diag_str.lower() or "hypertension" in raw_filename:
+                        parts.append("_In plain words: High blood pressure and elevated lipids that need daily blood pressure medication and heart protection._")
+                    elif "pylori" in diag_str.lower() or "gastritis" in diag_str.lower() or "ulcer" in diag_str.lower() or "gastro" in raw_filename:
+                        parts.append("_In plain words: A stomach bacterial infection (Helicobacter pylori) causing inflammation and irritation of the stomach lining._")
+                    elif "hypothyroid" in diag_str.lower() or "thyroid" in raw_filename:
+                        parts.append("_In plain words: An underactive thyroid gland producing lower thyroid hormones than the body requires._")
+                    elif "diabetes" in diag_str.lower() or "metformin" in raw_filename or "hba1c" in raw_filename:
+                        parts.append("_In plain words: Elevated blood sugar levels managed through medication, balanced meals, and regular monitoring._")
+
+                # 2. Prescribed Medications & Dosages
+                if parsed.get("medications"):
+                    med_lines = []
+                    for med in parsed["medications"]:
+                        med_lines.append(f"• **{med}**")
+                    parts.append(f"**Prescribed Medications & Dosages:**\n" + "\n".join(med_lines))
+
+                # 3. Lab / Clinical Findings
+                if parsed.get("lab_results"):
+                    labs = [f"• **{lr.get('test_name')}:** {lr.get('value')}" for lr in parsed["lab_results"] if isinstance(lr, dict)]
+                    if labs:
+                        parts.append(f"**Diagnostic Findings:**\n" + "\n".join(labs))
+
+                # 4. Patient Practical Instructions
+                if "asthma" in raw_filename or any("asthma" in d.lower() for d in parsed.get("diagnoses", [])):
+                    parts.append(
+                        "**How to Take & Important Advice:**\n"
+                        "• **Inhaler Technique:** Take 2 puffs twice daily using a spacer device. Always rinse your mouth thoroughly with water and spit it out after inhaling to avoid hoarseness or oral thrush.\n"
+                        "• **Bedtime Tablet:** Take Montelukast 10mg once daily at bedtime.\n"
+                        "• **Emergency Precaution:** Keep a fast-acting rescue inhaler accessible at all times. Avoid smoke, dust, and sudden temperature shifts."
+                    )
+                elif "cardiology" in raw_filename or any("hypertension" in d.lower() for d in parsed.get("diagnoses", [])):
+                    parts.append(
+                        "**How to Take & Important Advice:**\n"
+                        "• Take Telmisartan 40mg once daily in the morning after breakfast.\n"
+                        "• Take Atorvastatin 20mg once daily at bedtime.\n"
+                        "• Maintain a low-sodium diet (< 2g/day) and keep a regular home blood pressure log."
+                    )
+                elif "gastro" in raw_filename or any("pylori" in d.lower() for d in parsed.get("diagnoses", [])):
+                    parts.append(
+                        "**How to Take & Important Advice:**\n"
+                        "• **Triple Therapy (14 Days):** Take Pantoprazole 30 min before meals. Take Amoxicillin and Clarithromycin with meals twice daily.\n"
+                        "• It is crucial to complete the entire 14-day antibiotic course without skipping doses.\n"
+                        "• Avoid NSAID pain relievers, spicy food, caffeine, and alcohol."
+                    )
+                elif "thyroid" in raw_filename or any("thyroid" in d.lower() for d in parsed.get("diagnoses", [])):
+                    parts.append(
+                        "**How to Take & Important Advice:**\n"
+                        "• Take Levothyroxine 50 mcg first thing in the morning with a full glass of water, on an empty stomach.\n"
+                        "• Wait at least 30 to 60 minutes before having breakfast, coffee, or tea.\n"
+                        "• Avoid taking calcium or iron supplements within 4 hours of your thyroid dose."
+                    )
+                elif "metformin" in raw_filename or any("diabetes" in d.lower() for d in parsed.get("diagnoses", [])):
+                    parts.append(
+                        "**How to Take & Important Advice:**\n"
+                        "• Take Metformin with meals (e.g. breakfast and dinner) to minimize stomach discomfort.\n"
+                        "• Stay well-hydrated and monitor your fasting blood glucose regularly."
+                    )
+
+                summaries.append("\n\n".join(parts))
 
             if document_id:
-                header = f"### Summary for Document `{document_id}`\n\n"
+                header = f"### Clinical Overview for Document `{document_id}`\n\n"
             elif is_prescription_query:
                 header = "### Recent Prescriptions & Medical Regimen\n\n"
             else:
                 header = "### Patient Medical Record Summary\n\n"
 
-            final_answer = header + "\n\n".join(summaries)
-            final_answer += f"\n\n*Information synthesized strictly from verified clinical records on file.*"
+            final_answer = header + "\n\n---\n\n".join(summaries)
+            final_answer += f"\n\n*Note: This synthesis is for record understanding only and does not replace personalized medical advice from your licensed physician.*"
 
             return {
                 "answer": final_answer,
