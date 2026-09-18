@@ -335,11 +335,21 @@ def verify_patient_access(patient_id: str, current_user: User = Depends(get_curr
     if role == "PATIENT":
         # Get patient profile linked to this user
         patient = db.query(Patient).filter(Patient.user_id == current_user.id).first()
-        if not patient or (patient.id != patient_id and patient.user_id != patient_id):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied: patient cannot access other patient records"
-            )
+        if not patient and patient_id:
+            patient = db.query(Patient).filter(Patient.id == patient_id).first()
+            
+        if not patient:
+            if current_user.id != patient_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied: patient cannot access other patient records"
+                )
+        else:
+            if patient.id != patient_id and patient.user_id != patient_id and current_user.id != patient_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied: patient cannot access other patient records"
+                )
         return
         
     if role == "DOCTOR":

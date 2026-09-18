@@ -37,31 +37,29 @@ async def upload_document(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # 1. Authorize patient identity (only patients can upload for themselves, admins for any)
-    patient = None
-    if patient_id:
-        patient = db.query(Patient).filter((Patient.id == patient_id) | (Patient.user_id == patient_id)).first()
-        
-    if not patient and current_user.role.upper() == "PATIENT":
+    # 1. Authorize patient identity
+    canonical_patient_id = None
+    if current_user.role.upper() == "ADMIN":
+        if patient_id:
+            patient = db.query(Patient).filter((Patient.id == patient_id) | (Patient.user_id == patient_id)).first()
+            canonical_patient_id = patient.id if patient else patient_id
+        else:
+            canonical_patient_id = "P001"
+    else:
+        # Patient uploading for themselves
         patient = db.query(Patient).filter(Patient.user_id == current_user.id).first()
-        
-    if not patient:
-        log_access(db, current_user.id, patient_id, "DOCUMENT_UPLOAD", "DENIED")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Patient profile not found"
-        )
-    
-    # Resolve canonical patient ID
-    canonical_patient_id = patient.id
-        
-    if current_user.role.upper() != "ADMIN":
-        if patient.user_id != current_user.id:
-            log_access(db, current_user.id, canonical_patient_id, "DOCUMENT_UPLOAD", "DENIED")
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied: patients can only upload documents for themselves"
-            )
+        if not patient and patient_id:
+            patient = db.query(Patient).filter(Patient.id == patient_id).first()
+        if not patient:
+            count = db.query(Patient).count()
+            canonical_patient_id = f"P{count + 1:03d}"
+            name = current_user.email.split("@")[0].capitalize() if current_user.email else "Patient"
+            patient = Patient(id=canonical_patient_id, user_id=current_user.id, name=name)
+            db.add(patient)
+            db.commit()
+            db.refresh(patient)
+        else:
+            canonical_patient_id = patient.id
             
     # 2. Validate file type/extension
     safe_name = file.filename or "document.pdf"
