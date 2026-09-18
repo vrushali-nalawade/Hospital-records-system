@@ -1,72 +1,57 @@
 import os
-import re
-from typing import List, Optional
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+from typing import List
+from fastapi import HTTPException
 from pydantic import BaseModel
 import torch
 from transformers import AutoTokenizer, AutoModel
 import gradio as gr
-
-# Hugging Face ZeroGPU Support (Free dynamic NVIDIA A100 GPU)
-try:
-    import spaces
-    HAS_SPACES = True
-    print("[HealthVault AI] Hugging Face ZeroGPU (spaces) module detected!")
-except ImportError:
-    HAS_SPACES = False
-    class spaces:
-        @staticmethod
-        def GPU(func=None, duration=60):
-            def decorator(f):
-                return f
-            return decorator(func) if func else decorator
-
-# 1. FastAPI REST API Core
-api_app = FastAPI(
-    title="HealthVault AI ZeroGPU Cloud Microservice",
-    description="Free ZeroGPU (NVIDIA A100) accelerated BGE-M3 microservice for HealthVault",
-    version="1.0.0"
-)
-
-api_app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+import spaces
 
 EMBED_MODEL_NAME = "BAAI/bge-m3"
 
-print(f"[HealthVault AI] Loading {EMBED_MODEL_NAME}...")
+print(f"[HealthVault AI] Initializing {EMBED_MODEL_NAME}...")
 tokenizer = AutoTokenizer.from_pretrained(EMBED_MODEL_NAME)
 model = AutoModel.from_pretrained(EMBED_MODEL_NAME)
-if torch.cuda.is_available():
-    model = model.half().to("cuda")
 model.eval()
-print(f"[HealthVault AI] Model {EMBED_MODEL_NAME} initialized successfully!")
+print(f"[HealthVault AI] Model {EMBED_MODEL_NAME} loaded successfully!")
 
 @spaces.GPU(duration=30)
-def compute_bge_m3_embedding(texts: List[str]) -> List[List[float]]:
-    """
-    ZeroGPU Accelerated Dense Vector Extraction (Runs on NVIDIA A100)
-    """
-    target_device = "cuda" if torch.cuda.is_available() else "cpu"
-    
-    # Ensure model weights are on active GPU during ZeroGPU execution slice
+def compute_single_embedding(text: str) -> str:
+    """ZeroGPU Gradio UI handler"""
+    if not text.strip():
+        return "Please enter medical or prescription text."
+        
     if torch.cuda.is_available() and next(model.parameters()).device.type != "cuda":
         model.to("cuda")
 
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    inputs = tokenizer([text], padding=True, truncation=True, max_length=512, return_tensors="pt").to(device)
+    
     with torch.no_grad():
-        inputs = tokenizer(
-            texts,
-            padding=True,
-            truncation=True,
-            max_length=512,
-            return_tensors="pt"
-        ).to(target_device)
-        
+        outputs = model(**inputs)
+        cls_rep = outputs.last_hidden_state[:, 0]
+        norm_rep = torch.nn.functional.normalize(cls_rep.float(), p=2, dim=1)
+        vec = norm_rep.cpu().tolist()[0]
+
+    gpu_label = "NVIDIA A100 ZeroGPU ⚡" if torch.cuda.is_available() else "CPU"
+    sample_preview = ", ".join(f"{v:.4f}" for v in vec[:6])
+    return (
+        f"✅ Vector Generated Successfully ({gpu_label})\n"
+        f"• Dimensions: {len(vec)} (1024-d BGE-M3)\n"
+        f"• Vector Sample: [{sample_preview}...]\n\n"
+        f"REST API Endpoint: POST /embed"
+    )
+
+@spaces.GPU(duration=30)
+def embed_batch_internal(texts: List[str]) -> List[List[float]]:
+    """ZeroGPU REST API batch embedder"""
+    if torch.cuda.is_available() and next(model.parameters()).device.type != "cuda":
+        model.to("cuda")
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    inputs = tokenizer(texts, padding=True, truncation=True, max_length=512, return_tensors="pt").to(device)
+    
+    with torch.no_grad():
         outputs = model(**inputs)
         cls_rep = outputs.last_hidden_state[:, 0]
         norm_rep = torch.nn.functional.normalize(cls_rep.float(), p=2, dim=1)
@@ -80,60 +65,46 @@ class EmbedResponse(BaseModel):
     dimension: int
     count: int
 
-@api_app.get("/")
-def health_check():
-    return {
-        "service": "HealthVault AI ZeroGPU Microservice",
-        "status": "online",
-        "zerogpu": HAS_SPACES,
-        "model": EMBED_MODEL_NAME,
-        "dimension": 1024,
-        "endpoint": "POST /embed"
-    }
+# 1. Build Gradio UI
+with gr.Blocks(title="HealthVault AI ZeroGPU BGE-M3") as demo:
+    gr.Markdown("# 🏥 HealthVault AI Cloud Microservice")
+    gr.Markdown("Free **Hugging Face ZeroGPU (NVIDIA A100)** accelerated vector embedding endpoint for **HealthVault Medical Locker**.")
 
-@api_app.post("/embed", response_model=EmbedResponse)
-def generate_embeddings(req: EmbedRequest):
+    with gr.Row():
+        with gr.Column():
+            input_text = gr.Textbox(
+                lines=4,
+                placeholder="Enter prescription text (e.g., Metformin 500mg twice daily with meals for Type 2 Diabetes)...",
+                label="Clinical Text"
+            )
+            submit_btn = gr.Button("⚡ Generate 1024-d BGE-M3 Embedding", variant="primary")
+        with gr.Column():
+            output_text = gr.Textbox(lines=6, label="Extraction & GPU Status")
+
+    submit_btn.click(compute_single_embedding, inputs=input_text, outputs=output_text)
+
+# 2. Attach REST API routes directly to Gradio's internal FastAPI app
+@demo.app.post("/embed", response_model=EmbedResponse)
+def api_embed(req: EmbedRequest):
     if not req.texts:
         raise HTTPException(status_code=400, detail="texts list cannot be empty")
-
-    vectors = compute_bge_m3_embedding(req.texts)
-
+    vectors = embed_batch_internal(req.texts)
     return {
         "embeddings": vectors,
         "dimension": len(vectors[0]),
         "count": len(vectors)
     }
 
-# 2. Gradio Interactive UI (100% Free Gradio Space + ZeroGPU)
-def interactive_demo(text: str):
-    if not text.strip():
-        return "Please enter clinical or prescription text."
-    
-    vec = compute_bge_m3_embedding([text])[0]
-    gpu_status = "NVIDIA A100 ZeroGPU Active 🚀" if torch.cuda.is_available() or HAS_SPACES else "CPU Mode"
-        
-    return (
-        f"✅ Vector Generated on {gpu_status}!\n"
-        f"• Dimensions: {len(vec)} (1024-d BGE-M3)\n"
-        f"• Vector Sample: [{', '.join(f'{x:.4f}' for x in vec[:6])}...]\n\n"
-        f"Backend API is LIVE at: POST /embed"
-    )
+@demo.app.get("/health")
+def api_health():
+    return {
+        "status": "ok",
+        "service": "healthvault-ai-zerogpu",
+        "model": EMBED_MODEL_NAME,
+        "dimension": 1024
+    }
 
-demo = gr.Interface(
-    fn=interactive_demo,
-    inputs=gr.Textbox(
-        lines=4,
-        placeholder="Enter prescription text (e.g., Metformin 500mg twice daily for Type 2 Diabetes)...",
-        label="Clinical Text Input"
-    ),
-    outputs=gr.Textbox(label="ZeroGPU Vector Extraction"),
-    title="⚡ HealthVault AI ZeroGPU BGE-M3 Cloud Microservice",
-    description="Free ZeroGPU (NVIDIA A100) Accelerated Cloud Endpoint for HealthVault Medical Locker RAG."
-)
-
-# Mount FastAPI endpoints into the Gradio application
-app = gr.mount_gradio_app(api_app, demo, path="/")
+demo.queue()
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=7860)
+    demo.launch()
