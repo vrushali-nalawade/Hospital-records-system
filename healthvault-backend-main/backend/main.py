@@ -86,6 +86,28 @@ def root():
         "docs": "/docs"
     }
 
+@app.get("/api/storage/signed")
+@app.get("/storage/signed")
+def serve_signed_storage(
+    path: str = "",
+    expires: int = 0,
+    token: str = "",
+):
+    from .storage import storage_service, get_document_path, MIME_MAP
+    from fastapi.responses import FileResponse
+    import os
+    if not storage_service.verify_signed_url_token(path, expires, token):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Signed access link has expired or has an invalid signature")
+    safe_path = get_document_path(path)
+    if not os.path.exists(safe_path):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Document file not found")
+    filename = os.path.basename(path)
+    _, ext = os.path.splitext(filename)
+    media_type = MIME_MAP.get(ext.lower(), "application/octet-stream")
+    return FileResponse(safe_path, media_type=media_type, filename=filename)
+
 # Expose global audit history log endpoint
 @app.get("/audit/me", response_model=List[AccessLogResponse], tags=["audit"])
 def get_my_audit_logs(
