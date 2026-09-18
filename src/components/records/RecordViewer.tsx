@@ -172,10 +172,11 @@ export default function RecordViewer({
                   {loadingUrl ? "Opening Document..." : "Access Secure Document"}
                   <ExternalLink className="h-3 w-3" />
                 </button>
+              </div>
               <Badge tone={record.processingStatus === "failed" && record.extractedInformation.length > 0 ? "ready" : record.processingStatus}>
                 {record.processingStatus === "failed" && record.extractedInformation.length > 0 ? "ready" : record.processingStatus.replace("_", " ")}
               </Badge>
-          </div>
+            </div>
 
           <div>
             <div className="mb-2 flex items-center justify-between">
