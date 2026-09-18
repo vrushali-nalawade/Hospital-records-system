@@ -1,7 +1,9 @@
 /**
  * Centralized API Base URL Configuration for HealthVault Frontend.
- * LIVE API MODE uses NEXT_PUBLIC_API_URL or defaults to the Replit production backend.
+ * In browser production, routes through Next.js proxy /api/backend to permanently eliminate CORS.
  */
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "http://localhost:8000";
+  typeof window !== "undefined"
+    ? "/api/backend"
+    : process.env.NEXT_PUBLIC_API_URL || "https://hospital-records-system.onrender.com";
+
