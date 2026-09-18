@@ -1,3 +1,8 @@
+import os
+import json
+import shutil
+import sqlite3
+import pickle
 import hashlib
 from typing import List, Dict, Any, Optional
 from qdrant_client import QdrantClient
@@ -12,12 +17,6 @@ if not os.environ.get("RENDER") and getattr(settings, "ENVIRONMENT", "").lower()
         HAS_TEAMMATES_RAG = True
     except (ImportError, Exception):
         HAS_TEAMMATES_RAG = False
-
-import os
-import json
-import shutil
-import sqlite3
-import pickle
 
 COLLECTION_NAME = "medical_records"
 VECTOR_SIZE = 1024

@@ -93,7 +93,10 @@ def create_app_engine(db_url: Optional[str] = None):
         engine_kwargs = {"connect_args": {"check_same_thread": False}}
     else:
         # PostgreSQL / Supabase connection pool configuration
-        connect_args = {"connect_timeout": 10}
+        connect_args = {
+            "connect_timeout": 10,
+            "prepare_threshold": None
+        }
         if "sslmode=" not in url.lower() and not ("localhost" in url or "127.0.0.1" in url):
             connect_args["sslmode"] = "require"
 

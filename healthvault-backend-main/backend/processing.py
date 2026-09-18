@@ -6,6 +6,7 @@ from .database import SessionLocal
 from .models import Document, ProcessingJob, Visit
 from .ai_service import ai_index_document
 from .storage import get_document_path
+from .config import settings
 
 def call_person2_ocr_nlp(document_path: str, patient_id: str, document_id: str) -> dict:
     """
