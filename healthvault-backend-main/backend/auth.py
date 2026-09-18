@@ -338,19 +338,20 @@ def verify_patient_access(patient_id: str, current_user: User = Depends(get_curr
         if not patient and patient_id:
             patient = db.query(Patient).filter(Patient.id == patient_id).first()
             
-        if not patient:
-            if current_user.id != patient_id:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Access denied: patient cannot access other patient records"
-                )
-        else:
-            if patient.id != patient_id and patient.user_id != patient_id and current_user.id != patient_id:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Access denied: patient cannot access other patient records"
-                )
-        return
+        # If user is the logged in patient, allow access if patient matches or if user uploaded it
+        if patient and (patient.id == patient_id or patient.user_id == patient_id):
+            return
+        if current_user.id == patient_id:
+            return
+            
+        # Allow access if document belongs to this user or user's auto-generated patient ID
+        if patient and patient.user_id == current_user.id:
+            return
+            
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: patient cannot access other patient records"
+        )
         
     if role == "DOCTOR":
         # Resolve canonical patient id if patient_id was passed as user_id
