@@ -30,16 +30,18 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS Policy configuration (allowing active frontend origins and safe Vercel preview deployments)
+# CORS Policy configuration (allowing active frontend origins, Render, Vercel, and local dev)
 import logging
 logger = logging.getLogger("backend")
 logger.info(f"Configured CORS Allowed Origins: {settings.cors_origins}")
-logger.info("Configured CORS Allowed Origin Regex: ^https://([a-zA-Z0-9_-]+\\.)*vercel\\.app$")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_origin_regex=r"^https://([a-zA-Z0-9_-]+\.)*vercel\.app$",
+    allow_origins=settings.cors_origins + [
+        "https://hospital-records-system-front.onrender.com",
+        "https://hospital-records-system.onrender.com"
+    ],
+    allow_origin_regex=r"^https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
