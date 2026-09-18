@@ -12,9 +12,6 @@ def call_person2_ocr_nlp(document_path: str, patient_id: str, document_id: str) 
     Adapter around Person 2 medical document processing pipeline.
     Simulates OCR & NLP entity extraction.
     """
-    # Simple simulated delay to show asynchronous background behavior
-    time.sleep(0.5)
-
     filename = os.path.basename(document_path).lower()
 
     # Read file content for robust keyword matching (in case filename is changed to doc_id)
