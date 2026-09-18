@@ -6,7 +6,7 @@ import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import EmptyState from "@/components/ui/EmptyState";
 import { useAuth } from "@/context/auth-context";
-import { getAccessLogsForPatient } from "@/lib/services/consent-service";
+import { getAccessLogsForPatient, fetchAccessLogsForPatient } from "@/lib/services/consent-service";
 import type { AccessLog } from "@/types";
 import { ListChecks } from "lucide-react";
 
@@ -17,7 +17,17 @@ export default function AccessHistoryPage() {
   const [actionFilter, setActionFilter] = useState("all");
 
   useEffect(() => {
-    if (user) setLogs(getAccessLogsForPatient(user.uid));
+    if (!user) return;
+    const loadData = async () => {
+      try {
+        const auditLogs = await fetchAccessLogsForPatient(user.uid);
+        setLogs(auditLogs);
+      } catch (e) {
+        console.error("Failed to load access logs from API", e);
+        setLogs(getAccessLogsForPatient(user.uid));
+      }
+    };
+    loadData();
   }, [user]);
 
   const doctors = useMemo(() => Array.from(new Set(logs.map((l) => l.doctorName))), [logs]);

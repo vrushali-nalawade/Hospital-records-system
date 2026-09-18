@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { HeartPulse } from "lucide-react";
+import { Stethoscope } from "lucide-react";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
-import { forgotPassword } from "@/lib/services/auth-service";
+import { forgotPassword, validateDoctorEmailDomain } from "@/lib/services/auth-service";
 
-export default function ForgotPasswordPage() {
+export default function DoctorForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -18,9 +18,16 @@ export default function ForgotPasswordPage() {
     setError("");
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
-      setError("Please enter your email.");
+      setError("Please enter your professional doctor email.");
       return;
     }
+
+    const domainValidation = validateDoctorEmailDomain(trimmedEmail);
+    if (!domainValidation.valid) {
+      setError(domainValidation.error || "Please enter an authorized doctor email domain.");
+      return;
+    }
+
     setLoading(true);
     try {
       await forgotPassword(trimmedEmail);
@@ -28,7 +35,7 @@ export default function ForgotPasswordPage() {
     } catch (err: any) {
       const msg = err?.message || "";
       if (msg.includes("user-not-found") || msg.includes("auth/user-not-found")) {
-        setError("No account found with this email address.");
+        setError("No doctor account found with this email address.");
       } else if (msg.includes("invalid-email") || msg.includes("auth/invalid-email")) {
         setError("Please enter a valid email address format.");
       } else if (msg.includes("too-many-requests") || msg.includes("auth/too-many-requests")) {
@@ -49,17 +56,17 @@ export default function ForgotPasswordPage() {
           <span className="font-semibold text-slate-900">HealthLocker</span>
         </Link>
         <div className="mb-4 flex items-center gap-2">
-          <HeartPulse className="h-5 w-5 text-teal-600" />
-          <h1 className="text-xl font-semibold text-slate-900">Reset your password</h1>
+          <Stethoscope className="h-5 w-5 text-teal-600" />
+          <h1 className="text-xl font-semibold text-slate-900">Reset Doctor Password</h1>
         </div>
         <p className="mb-6 text-sm text-slate-500">
-          Enter your account email and we&apos;ll send you a reset link.
+          Enter your professional doctor account email and we&apos;ll send you a password reset link.
         </p>
 
         {sent ? (
           <div className="space-y-4">
             <div className="rounded-lg bg-emerald-50 p-4 text-sm text-emerald-700">
-              If an account exists for <strong>{email}</strong>, a password reset link has been sent to your inbox.
+              If an approved doctor account exists for <strong>{email}</strong>, a password reset link has been sent to your inbox.
             </div>
             <p className="text-xs text-slate-500">
               Please check your spam or junk folder if you do not receive the email within a few minutes.
@@ -68,12 +75,16 @@ export default function ForgotPasswordPage() {
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
-              label="Email"
+              id="doctor-reset-email"
+              label="Professional Email"
               type="email"
-              placeholder="patient@example.com"
+              placeholder="doctor@hospital.org"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
+            <p className="text-xs text-slate-500">
+              Note: Must be your registered professional domain (@hospital.org, @healthvault.com, @demo.health, @doctor.com).
+            </p>
             {error && <p className="text-sm text-red-600">{error}</p>}
             <Button type="submit" className="w-full" loading={loading}>
               Send reset link
@@ -82,8 +93,8 @@ export default function ForgotPasswordPage() {
         )}
 
         <p className="mt-6 text-center text-sm text-slate-500">
-          <Link href="/login" className="font-medium text-teal-600 hover:underline">
-            Back to login
+          <Link href="/doctor-login" className="font-medium text-teal-600 hover:underline">
+            Back to Doctor Login
           </Link>
         </p>
       </div>

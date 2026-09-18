@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import type { Consent } from "@/types";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import DashboardShell from "@/components/layout/DashboardShell";
@@ -9,13 +10,27 @@ import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import { useAuth } from "@/context/auth-context";
 import { MOCK_PATIENTS } from "@/lib/mock/mock-data";
-import { getConsentsForDoctor, requestAccess } from "@/lib/services/consent-service";
+import { getConsentsForDoctor, fetchConsentsForDoctor, requestAccess } from "@/lib/services/consent-service";
 import { pushToast } from "@/components/ui/Toast";
 
 export default function DoctorPatientsPage() {
   const { user } = useAuth();
   const [query, setQuery] = useState("");
-  const [consents, setConsents] = useState(user ? getConsentsForDoctor(user.uid) : []);
+  const [consents, setConsents] = useState<Consent[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    const loadData = async () => {
+      try {
+        const cons = await fetchConsentsForDoctor(user.uid);
+        setConsents(cons);
+      } catch (e) {
+        console.error("Failed to load consents for doctor", e);
+        setConsents(getConsentsForDoctor(user.uid));
+      }
+    };
+    loadData();
+  }, [user]);
 
   const filtered = useMemo(
     () =>
@@ -38,7 +53,15 @@ export default function DoctorPatientsPage() {
       "lab_report",
       "discharge_summary",
     ]);
-    setConsents(getConsentsForDoctor(user.uid));
+    const loadData = async () => {
+      try {
+        const cons = await fetchConsentsForDoctor(user.uid);
+        setConsents(cons);
+      } catch (e) {
+        setConsents(getConsentsForDoctor(user.uid));
+      }
+    };
+    loadData();
     pushToast({ type: "success", message: "Access request sent." });
   };
 

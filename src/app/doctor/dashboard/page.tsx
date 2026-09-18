@@ -6,7 +6,7 @@ import { Users, ClipboardCheck, ShieldCheck, Activity } from "lucide-react";
 import DashboardShell from "@/components/layout/DashboardShell";
 import Card from "@/components/ui/Card";
 import { useAuth } from "@/context/auth-context";
-import { getConsentsForDoctor } from "@/lib/services/consent-service";
+import { getConsentsForDoctor, fetchConsentsForDoctor } from "@/lib/services/consent-service";
 import { MOCK_PATIENTS } from "@/lib/mock/mock-data";
 import type { Consent } from "@/types";
 
@@ -29,7 +29,17 @@ export default function DoctorDashboardPage() {
   const [consents, setConsents] = useState<Consent[]>([]);
 
   useEffect(() => {
-    if (user) setConsents(getConsentsForDoctor(user.uid));
+    if (!user) return;
+    const loadData = async () => {
+      try {
+        const cons = await fetchConsentsForDoctor(user.uid);
+        setConsents(cons);
+      } catch (e) {
+        console.error("Failed to load doctor consents", e);
+        setConsents(getConsentsForDoctor(user.uid));
+      }
+    };
+    loadData();
   }, [user]);
 
   const pending = consents.filter((c) => c.status === "pending").length;

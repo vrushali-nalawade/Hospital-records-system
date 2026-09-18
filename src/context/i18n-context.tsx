@@ -11,7 +11,7 @@ const dictionaries: Record<Locale, typeof en> = { en, hi, mr };
 interface I18nContextValue {
   locale: Locale;
   setLocale: (l: Locale) => void;
-  t: (key: keyof typeof en) => string;
+  t: (key: string) => string;
 }
 
 const I18nContext = createContext<I18nContextValue | undefined>(undefined);
@@ -29,7 +29,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("hrl_locale", l);
   };
 
-  const t = (key: keyof typeof en) => dictionaries[locale][key] ?? dictionaries.en[key];
+  const t = (key: string): string =>
+    (dictionaries[locale] as any)?.[key] ?? (dictionaries.en as any)?.[key] ?? key;
 
   return (
     <I18nContext.Provider value={{ locale, setLocale, t }}>

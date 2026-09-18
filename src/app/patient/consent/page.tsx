@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import DashboardShell from "@/components/layout/DashboardShell";
@@ -7,13 +7,24 @@ import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import EmptyState from "@/components/ui/EmptyState";
 import { useAuth } from "@/context/auth-context";
-import { getConsentsForPatient, updateConsentStatus } from "@/lib/services/consent-service";
+import { useI18n } from "@/context/i18n-context";
+import { getConsentsForPatient, fetchConsentsForPatient, updateConsentStatus } from "@/lib/services/consent-service";
 import { recordTypeLabel } from "@/lib/mock/mock-data";
 import type { Consent } from "@/types";
-import { ShieldCheck, ShieldX } from "lucide-react";
+import { ShieldCheck, ShieldX, AlertTriangle } from "lucide-react";
 import { pushToast } from "@/components/ui/Toast";
 
-function ConsentCard({ consent, onAction }: { consent: Consent; onAction: (id: string, status: Consent["status"]) => void }) {
+function ConsentCard({
+  consent,
+  onAction,
+  onRequestRevoke,
+}: {
+  consent: Consent;
+  onAction: (id: string, status: Consent["status"]) => void;
+  onRequestRevoke: (consent: Consent) => void;
+}) {
+  const { t } = useI18n();
+
   return (
     <Card className="p-5">
       <div className="flex items-start justify-between">
@@ -41,7 +52,7 @@ function ConsentCard({ consent, onAction }: { consent: Consent; onAction: (id: s
         {consent.status === "pending" && (
           <>
             <Button size="sm" onClick={() => onAction(consent.consentId, "approved")}>
-              Grant access
+              {t("grantConsent")}
             </Button>
             <Button size="sm" variant="outline" onClick={() => onAction(consent.consentId, "rejected")}>
               Reject
@@ -49,8 +60,8 @@ function ConsentCard({ consent, onAction }: { consent: Consent; onAction: (id: s
           </>
         )}
         {consent.status === "approved" && (
-          <Button size="sm" variant="danger" onClick={() => onAction(consent.consentId, "revoked")}>
-            Revoke access
+          <Button size="sm" variant="danger" onClick={() => onRequestRevoke(consent)}>
+            {t("revokeAccess")}
           </Button>
         )}
       </div>
@@ -60,19 +71,45 @@ function ConsentCard({ consent, onAction }: { consent: Consent; onAction: (id: s
 
 export default function ConsentManagementPage() {
   const { user } = useAuth();
+  const { t } = useI18n();
   const [consents, setConsents] = useState<Consent[]>([]);
+  const [revokeTarget, setRevokeTarget] = useState<Consent | null>(null);
 
   useEffect(() => {
-    if (user) setConsents(getConsentsForPatient(user.uid));
+    if (!user) return;
+    const loadData = async () => {
+      try {
+        const cons = await fetchConsentsForPatient(user.uid);
+        setConsents(cons);
+      } catch (e) {
+        console.error("Failed to load consents from API", e);
+        setConsents(getConsentsForPatient(user.uid));
+      }
+    };
+    loadData();
   }, [user]);
 
-  const handleAction = (id: string, status: Consent["status"]) => {
+  const handleAction = async (id: string, status: Consent["status"]) => {
     const updated = updateConsentStatus(id, status);
     setConsents(user ? updated.filter((c) => c.patientId === user.uid) : updated);
     pushToast({
       type: status === "approved" ? "success" : "info",
       message: `Consent ${status}.`,
     });
+    if (user) {
+      try {
+        const cons = await fetchConsentsForPatient(user.uid);
+        setConsents(cons);
+      } catch (e) {
+        console.error("Failed to refresh consents after action", e);
+      }
+    }
+  };
+
+  const confirmRevocation = () => {
+    if (!revokeTarget) return;
+    handleAction(revokeTarget.consentId, "revoked");
+    setRevokeTarget(null);
   };
 
   const pending = consents.filter((c) => c.status === "pending");
@@ -80,7 +117,7 @@ export default function ConsentManagementPage() {
   const others = consents.filter((c) => !["pending", "approved"].includes(c.status));
 
   return (
-    <DashboardShell role="patient" title="Consent Management">
+    <DashboardShell role="patient" title={t("consentManagement")}>
       <div className="space-y-8">
         <section>
           <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
@@ -90,7 +127,9 @@ export default function ConsentManagementPage() {
             <EmptyState title="No pending requests" description="New doctor access requests will appear here." />
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {pending.map((c) => <ConsentCard key={c.consentId} consent={c} onAction={handleAction} />)}
+              {pending.map((c) => (
+                <ConsentCard key={c.consentId} consent={c} onAction={handleAction} onRequestRevoke={setRevokeTarget} />
+              ))}
             </div>
           )}
         </section>
@@ -103,7 +142,9 @@ export default function ConsentManagementPage() {
             <EmptyState title="No active consents" description="Approved doctor access will appear here." />
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {active.map((c) => <ConsentCard key={c.consentId} consent={c} onAction={handleAction} />)}
+              {active.map((c) => (
+                <ConsentCard key={c.consentId} consent={c} onAction={handleAction} onRequestRevoke={setRevokeTarget} />
+              ))}
             </div>
           )}
         </section>
@@ -114,11 +155,34 @@ export default function ConsentManagementPage() {
               <ShieldX className="h-4 w-4 text-slate-400" /> Past Consents
             </h3>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {others.map((c) => <ConsentCard key={c.consentId} consent={c} onAction={handleAction} />)}
+              {others.map((c) => (
+                <ConsentCard key={c.consentId} consent={c} onAction={handleAction} onRequestRevoke={setRevokeTarget} />
+              ))}
             </div>
           </section>
         )}
       </div>
+
+      {/* Revocation Confirmation Modal */}
+      {revokeTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+          <Card className="max-w-md p-6">
+            <div className="flex items-center gap-3 text-red-600">
+              <AlertTriangle className="h-6 w-6 shrink-0" />
+              <h3 className="text-lg font-semibold text-slate-900">{t("confirmRevokeTitle")}</h3>
+            </div>
+            <p className="mt-3 text-sm text-slate-600">{t("confirmRevokeText")}</p>
+            <div className="mt-6 flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setRevokeTarget(null)}>
+                {t("cancel")}
+              </Button>
+              <Button variant="danger" onClick={confirmRevocation}>
+                {t("revokeAccess")}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </DashboardShell>
   );
 }

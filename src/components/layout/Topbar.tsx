@@ -21,8 +21,10 @@ export default function Topbar({ title }: { title: string }) {
     <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
       <div>
         <h1 className="text-lg font-semibold text-slate-900">{title}</h1>
-        {IS_DEMO_MODE && (
-          <span className="text-xs font-medium text-purple-600">Demo Mode — mock data</span>
+        {IS_DEMO_MODE ? (
+          <span className="text-xs font-medium text-purple-600">Demo Mode - mock data</span>
+        ) : (
+          <span className="text-xs font-medium text-teal-600 px-2 py-0.5 rounded bg-teal-50 border border-teal-200">LIVE API MODE</span>
         )}
       </div>
       <div className="flex items-center gap-3">

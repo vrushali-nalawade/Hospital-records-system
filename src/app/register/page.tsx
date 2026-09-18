@@ -147,6 +147,12 @@ export default function RegisterPage() {
             Log in
           </Link>
         </p>
+        <p className="mt-2 text-center text-sm text-slate-500">
+          Are you a doctor or provider?{" "}
+          <Link href="/doctor-register" className="font-medium text-teal-600 hover:underline">
+            Register as Doctor
+          </Link>
+        </p>
       </div>
     </div>
   );

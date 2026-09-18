@@ -8,12 +8,14 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { loginDoctor } from "@/lib/services/auth-service";
 import { useAuth } from "@/context/auth-context";
+import { useI18n } from "@/context/i18n-context";
 import { DEMO_CREDENTIALS, IS_DEMO_MODE } from "@/lib/demo-mode";
 import { pushToast } from "@/components/ui/Toast";
 
 export default function DoctorLoginPage() {
   const router = useRouter();
   const { setUser } = useAuth();
+  const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -48,27 +50,37 @@ export default function DoctorLoginPage() {
         </Link>
         <div className="mb-6 flex items-center gap-2">
           <Stethoscope className="h-5 w-5 text-teal-600" />
-          <h1 className="text-xl font-semibold text-slate-900">Doctor Login</h1>
+          <h1 className="text-xl font-semibold text-slate-900">{t("doctorLogin")}</h1>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
-            label="Email"
+            id="doctor-email"
+            label={t("email")}
             type="email"
-            placeholder="doctor@example.com"
+            placeholder="doctor@hospital.org"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
           <Input
-            label="Password"
+            id="doctor-password"
+            label={t("password")}
             type="password"
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+          <p className="text-xs text-slate-500">
+            Note: Professional doctor email domain required (@hospital.org, @healthvault.com, @demo.health, @doctor.com). Personal Gmail/Yahoo accounts are prohibited.
+          </p>
           {error && <p className="text-sm text-red-600">{error}</p>}
+          <div className="flex items-center justify-between text-sm">
+            <Link href="/doctor-forgot-password" className="text-teal-600 hover:underline">
+              Forgot password?
+            </Link>
+          </div>
           <Button type="submit" className="w-full" loading={loading}>
-            Log in
+            {t("login")}
           </Button>
         </form>
 
@@ -81,9 +93,15 @@ export default function DoctorLoginPage() {
         )}
 
         <p className="mt-6 text-center text-sm text-slate-500">
+          Don&apos;t have a doctor account?{" "}
+          <Link href="/doctor-register" className="font-medium text-teal-600 hover:underline">
+            Register as Doctor
+          </Link>
+        </p>
+        <p className="mt-2 text-center text-sm text-slate-500">
           Are you a patient?{" "}
           <Link href="/login" className="font-medium text-teal-600 hover:underline">
-            Patient login
+            {t("patientLogin")}
           </Link>
         </p>
       </div>

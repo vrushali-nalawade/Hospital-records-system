@@ -8,8 +8,8 @@ import MedicalRecordCard from "@/components/records/MedicalRecordCard";
 import RecordViewer from "@/components/records/RecordViewer";
 import EmptyState from "@/components/ui/EmptyState";
 import { useAuth } from "@/context/auth-context";
-import { getRecordsForPatient } from "@/lib/services/records-service";
-import { getConsentsForDoctor, hasApprovedConsent, logAccess } from "@/lib/services/consent-service";
+import { getRecordsForPatient, fetchRecordsForPatient } from "@/lib/services/records-service";
+import { getConsentsForDoctor, fetchConsentsForDoctor, hasApprovedConsent, logAccess } from "@/lib/services/consent-service";
 import { MOCK_PATIENTS } from "@/lib/mock/mock-data";
 import type { Consent, MedicalRecord } from "@/types";
 
@@ -28,15 +28,32 @@ export default function DoctorPatientRecordsPage({
 
   useEffect(() => {
     if (!user) return;
-    const doctorConsents = getConsentsForDoctor(user.uid);
-    const c = doctorConsents.find((c) => c.patientId === patientId && c.status === "approved");
-    setConsent(c);
-    if (c) {
-      const all = getRecordsForPatient(patientId).filter((r) =>
-        hasApprovedConsent(patientId, user.uid, r.recordType)
-      );
-      setRecords(all);
-    }
+    const loadData = async () => {
+      try {
+        const doctorConsents = await fetchConsentsForDoctor(user.uid);
+        const c = doctorConsents.find((c) => c.patientId === patientId && c.status === "approved");
+        setConsent(c);
+        if (c) {
+          const recs = await fetchRecordsForPatient(patientId);
+          const permitted = recs.filter((r) =>
+            hasApprovedConsent(patientId, user.uid, r.recordType)
+          );
+          setRecords(permitted);
+          return;
+        }
+      } catch (e) {
+        console.error("Failed to load doctor patient records from API", e);
+      }
+      const cMock = getConsentsForDoctor(user.uid).find((c) => c.patientId === patientId && c.status === "approved");
+      setConsent(cMock);
+      if (cMock) {
+        const all = getRecordsForPatient(patientId).filter((r) =>
+          hasApprovedConsent(patientId, user.uid, r.recordType)
+        );
+        setRecords(all);
+      }
+    };
+    loadData();
   }, [user, patientId]);
 
   const handleView = (record: MedicalRecord) => {

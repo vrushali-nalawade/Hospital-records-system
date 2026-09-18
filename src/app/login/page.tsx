@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -8,12 +8,14 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { loginPatient } from "@/lib/services/auth-service";
 import { useAuth } from "@/context/auth-context";
+import { useI18n } from "@/context/i18n-context";
 import { DEMO_CREDENTIALS, IS_DEMO_MODE } from "@/lib/demo-mode";
 import { pushToast } from "@/components/ui/Toast";
 
 export default function PatientLoginPage() {
   const router = useRouter();
   const { setUser } = useAuth();
+  const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -48,21 +50,21 @@ export default function PatientLoginPage() {
         </Link>
         <div className="mb-6 flex items-center gap-2">
           <HeartPulse className="h-5 w-5 text-teal-600" />
-          <h1 className="text-xl font-semibold text-slate-900">Patient Login</h1>
+          <h1 className="text-xl font-semibold text-slate-900">{t("patientLogin")}</h1>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
             id="email"
-            label="Email"
+            label={t("email")}
             type="email"
-            placeholder="you@example.com"
+            placeholder="patient@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
           <Input
             id="password"
-            label="Password"
+            label={t("password")}
             type="password"
             placeholder="••••••••"
             value={password}
@@ -75,7 +77,7 @@ export default function PatientLoginPage() {
             </Link>
           </div>
           <Button type="submit" className="w-full" loading={loading}>
-            Log in
+            {t("login")}
           </Button>
         </form>
 
@@ -90,13 +92,13 @@ export default function PatientLoginPage() {
         <p className="mt-6 text-center text-sm text-slate-500">
           Don&apos;t have an account?{" "}
           <Link href="/register" className="font-medium text-teal-600 hover:underline">
-            Register
+            {t("register")}
           </Link>
         </p>
         <p className="mt-2 text-center text-sm text-slate-500">
           Are you a doctor?{" "}
           <Link href="/doctor-login" className="font-medium text-teal-600 hover:underline">
-            Doctor login
+            {t("doctorLogin")}
           </Link>
         </p>
       </div>

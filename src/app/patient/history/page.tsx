@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import DashboardShell from "@/components/layout/DashboardShell";
@@ -6,8 +6,11 @@ import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
 import RecordViewer from "@/components/records/RecordViewer";
 import { useAuth } from "@/context/auth-context";
-import { getRecordsForPatient } from "@/lib/services/records-service";
+import { getRecordsForPatient, fetchRecordsForPatient } from "@/lib/services/records-service";
 import { MOCK_TIMELINE, recordTypeLabel } from "@/lib/mock/mock-data";
+import { IS_DEMO_MODE } from "@/lib/demo-mode";
+import { auth } from "@/lib/firebase/config";
+import { API_BASE_URL } from "@/lib/api-config";
 import type { MedicalRecord, TimelineEvent } from "@/types";
 import { History } from "lucide-react";
 
@@ -18,13 +21,61 @@ export default function MedicalHistoryPage() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
 
   useEffect(() => {
-    if (user) setRecords(getRecordsForPatient(user.uid));
+    if (!user) return;
+    const loadData = async () => {
+      try {
+        const recs = await fetchRecordsForPatient(user.uid);
+        setRecords(recs);
+        if (!IS_DEMO_MODE) {
+          const token = await auth?.currentUser?.getIdToken();
+          const res = await fetch(`${API_BASE_URL}/ai/timeline/${user.uid}`, {
+            headers: {
+              "Authorization": `Bearer ${token}`
+            }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const mapped: TimelineEvent[] = data.events.map((e: any, idx: number) => ({
+              eventId: `ev-${idx}-${e.source}`,
+              patientId: user.uid,
+              date: e.date,
+              recordType: e.event.toLowerCase().includes("prescription") ? "prescription" : (e.event.toLowerCase().includes("lab") ? "lab_report" : "prescription"),
+              title: e.event,
+              summary: `Source record: ${e.source}`,
+              recordId: e.source
+            }));
+            setTimelineEvents(mapped);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load timeline/records from API", err);
+        if (IS_DEMO_MODE) {
+          setRecords(getRecordsForPatient(user.uid));
+          setTimelineEvents([]);
+        }
+      }
+    };
+    loadData();
   }, [user]);
 
   const [selected, setSelected] = useState<MedicalRecord | null>(null);
+  const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
 
   // Build timeline: mock seed events + any records the patient has uploaded themselves
   const events: TimelineEvent[] = useMemo(() => {
+    if (!IS_DEMO_MODE) {
+      if (timelineEvents.length > 0) return timelineEvents;
+      return records.map((r) => ({
+        eventId: `ev-${r.recordId}`,
+        patientId: r.patientId,
+        date: r.createdAt,
+        recordType: r.recordType,
+        title: `${recordTypeLabel[r.recordType]} Uploaded`,
+        summary: `${r.fileName} was uploaded and processed.`,
+        recordId: r.recordId,
+      })).sort((a, b) => (a.date < b.date ? 1 : -1));
+    }
     const fromRecords: TimelineEvent[] = records
       .filter((r) => !MOCK_TIMELINE.some((t) => t.recordId === r.recordId))
       .map((r) => ({
@@ -37,7 +88,7 @@ export default function MedicalHistoryPage() {
         recordId: r.recordId,
       }));
     return [...MOCK_TIMELINE, ...fromRecords].sort((a, b) => (a.date < b.date ? 1 : -1));
-  }, [records]);
+  }, [records, timelineEvents]);
 
   const years = useMemo(
     () => Array.from(new Set(events.map((e) => new Date(e.date).getFullYear().toString()))),
@@ -109,3 +160,4 @@ export default function MedicalHistoryPage() {
     </DashboardShell>
   );
 }
+
