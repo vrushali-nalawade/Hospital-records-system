@@ -22,19 +22,38 @@ export default function RecordViewer({
 }) {
   const router = useRouter();
   const [loadingUrl, setLoadingUrl] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [showInlinePreview, setShowInlinePreview] = useState(true);
+
+  // Compute best available document source URL
+  const getDocumentSrc = () => {
+    const fn = (record.fileName || "").trim();
+    if (fn) {
+      return `/demo/${encodeURIComponent(fn)}`;
+    }
+    return record.fileUrl || `${API_BASE_URL}/documents/${record.recordId}`;
+  };
 
   const handleOpenSecureDocument = async () => {
     setLoadingUrl(true);
     try {
-      const signedUrl = await fetchDocumentSignedUrl(record.recordId);
-      const target = signedUrl || record.fileUrl || `${API_BASE_URL}/documents/${record.recordId}`;
-      if (target) {
-        window.open(target, "_blank", "noopener,noreferrer");
+      const fn = (record.fileName || "").trim();
+      const directDemoUrl = `/demo/${encodeURIComponent(fn)}`;
+
+      let signedUrl = await fetchDocumentSignedUrl(record.recordId);
+      if (signedUrl && !signedUrl.startsWith("*") && !signedUrl.includes("undefined")) {
+        window.open(signedUrl, "_blank", "noopener,noreferrer");
+        return;
       }
+
+      if (record.fileUrl && !record.fileUrl.startsWith("*")) {
+        window.open(record.fileUrl, "_blank", "noopener,noreferrer");
+        return;
+      }
+
+      window.open(directDemoUrl, "_blank", "noopener,noreferrer");
     } catch (err) {
       console.error("Notice opening secure document:", err);
-      window.open(`${API_BASE_URL}/documents/${record.recordId}`, "_blank", "noopener,noreferrer");
+      window.open(`/demo/${encodeURIComponent(record.fileName)}`, "_blank", "noopener,noreferrer");
     } finally {
       setLoadingUrl(false);
     }
@@ -69,9 +88,13 @@ export default function RecordViewer({
     }
   };
 
+  const docSrc = getDocumentSrc();
+  const isImage = record.fileName?.toLowerCase().match(/\.(png|jpe?g|webp|gif)$/);
+  const isPdf = record.fileName?.toLowerCase().endsWith(".pdf");
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-xl">
+      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
           <div>
             <h2 className="text-sm font-semibold text-slate-900">
@@ -85,10 +108,20 @@ export default function RecordViewer({
         </div>
 
         <div className="space-y-6 p-6">
+          {/* Document Access & Header Card */}
           <div>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Original Document
-            </h3>
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Original Document
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowInlinePreview(!showInlinePreview)}
+                className="text-xs font-medium text-teal-600 hover:underline"
+              >
+                {showInlinePreview ? "Hide Preview" : "Show Preview"}
+              </button>
+            </div>
             <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
               <div className="flex flex-col gap-1">
                 <span className="font-medium text-slate-700">{record.fileName}</span>
@@ -99,7 +132,7 @@ export default function RecordViewer({
                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-600 hover:text-teal-700 hover:underline disabled:opacity-50"
                 >
                   <Lock className="h-3.5 w-3.5" />
-                  {loadingUrl ? "Opening Document..." : "Access Secure Document"}
+                  {loadingUrl ? "Opening Document..." : "Access Secure Document (Open in New Tab)"}
                   <ExternalLink className="h-3 w-3" />
                 </button>
               </div>
@@ -109,10 +142,55 @@ export default function RecordViewer({
             </div>
           </div>
 
+          {/* Inline Visual Document Preview */}
+          {showInlinePreview && (
+            <div className="rounded-xl border border-slate-200 bg-slate-900 p-2 shadow-inner">
+              <div className="mb-2 flex items-center justify-between px-2 text-xs text-slate-400">
+                <span>Document Visualizer</span>
+                <span className="text-[11px] text-teal-400">Verified Health Record</span>
+              </div>
+              <div className="flex max-h-96 min-h-[220px] items-center justify-center overflow-hidden rounded-lg bg-slate-950">
+                {isImage ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={docSrc}
+                    alt={record.fileName}
+                    className="max-h-96 w-auto max-w-full rounded object-contain"
+                    onError={(e) => {
+                      // Fallback to secondary demo-files path
+                      const target = e.currentTarget;
+                      if (!target.src.includes("/demo-files/")) {
+                        target.src = `/demo-files/${encodeURIComponent(record.fileName)}`;
+                      }
+                    }}
+                  />
+                ) : isPdf ? (
+                  <iframe
+                    src={`${docSrc}#toolbar=0`}
+                    className="h-96 w-full rounded border-0"
+                    title={record.fileName}
+                  />
+                ) : (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={docSrc}
+                    alt={record.fileName}
+                    className="max-h-96 w-auto max-w-full rounded object-contain"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      target.style.display = "none";
+                    }}
+                  />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Structured Clinical Extraction */}
           <div>
             <div className="mb-2 flex items-center justify-between">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Extracted Information
+                Extracted Clinical Findings
               </h3>
               {record.isMockExtraction && (
                 <span className="flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-[11px] font-medium text-purple-700">
@@ -123,11 +201,11 @@ export default function RecordViewer({
             {record.extractedInformation.length === 0 ? (
               <p className="text-sm text-slate-400">No structured information extracted yet.</p>
             ) : (
-              <div className="divide-y divide-slate-100 rounded-lg border border-slate-200">
+              <div className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-slate-50/50">
                 {record.extractedInformation.map((field) => (
                   <div key={field.label} className="flex items-center justify-between px-4 py-2.5 text-sm">
                     <span className="text-slate-500">{field.label}</span>
-                    <span className="font-medium text-slate-800">{field.value}</span>
+                    <span className="font-semibold text-slate-800">{field.value}</span>
                   </div>
                 ))}
               </div>
