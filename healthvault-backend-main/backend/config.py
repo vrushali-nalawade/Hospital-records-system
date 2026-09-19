@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     OPENROUTER_API_KEY: Optional[str] = None # OpenRouter fallback for LLM synthesis
     OPENROUTER_MODEL: str = "openai/gpt-4o-mini"
 
+    # Google Gemini Conversational RAG Generation
+    GEMINI_API_KEY: Optional[str] = None
+    GEMINI_MODEL: str = "gemini-1.5-flash"
+
     # Supabase Cloud Storage (Private Bucket & Signed URLs)
     SUPABASE_URL: Optional[str] = None
     SUPABASE_SERVICE_ROLE_KEY: Optional[str] = None  # Strictly backend-only, never sent to client

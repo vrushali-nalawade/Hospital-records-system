@@ -1,4 +1,4 @@
-﻿services:
+services:
   - type: web
     name: healthvault-backend
     runtime: python
@@ -21,6 +21,10 @@
         value: serviceAccountKey.json
       - key: FRONTEND_URL
         value: "*"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-1.5-flash
 
   - type: web
     name: healthvault-frontend

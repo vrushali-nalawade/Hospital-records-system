@@ -106,6 +106,62 @@ class LLMInterface:
         self.api_url = api_url or os.getenv("OPENROUTER_API_URL", "https://openrouter.ai/api/v1/chat/completions")
 
     def generate(self, prompt: str, system_prompt: str = "") -> str:
+        # 1. Google Gemini API (gemini-1.5-flash / gemini-2.0-flash)
+        gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        if gemini_key:
+            try:
+                gemini_model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:generateContent?key={gemini_key}"
+                combined_instruction = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
+                gemini_payload = {
+                    "contents": [
+                        {
+                            "role": "user",
+                            "parts": [{"text": combined_instruction}]
+                        }
+                    ],
+                    "generationConfig": {
+                        "temperature": 0.3,
+                        "maxOutputTokens": 1024,
+                    }
+                }
+                res = requests.post(url, json=gemini_payload, timeout=20)
+                if res.status_code == 200:
+                    data = res.json()
+                    candidates = data.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if parts and parts[0].get("text"):
+                            return parts[0]["text"].strip()
+                else:
+                    print(f"[rag] Gemini API status {res.status_code}: {res.text}")
+            except Exception as e:
+                print(f"[rag] Gemini API call notice: {e}")
+
+        # 2. Hugging Face Space / Inference API endpoint
+        hf_llm_url = os.getenv("HF_LLM_URL")
+        hf_token = os.getenv("HF_API_TOKEN")
+        if hf_llm_url:
+            try:
+                headers = {"Content-Type": "application/json"}
+                if hf_token:
+                    headers["Authorization"] = f"Bearer {hf_token}"
+                payload = {
+                    "prompt": prompt,
+                    "system_prompt": system_prompt,
+                    "max_tokens": 512,
+                    "temperature": 0.2
+                }
+                res = requests.post(hf_llm_url, headers=headers, json=payload, timeout=25)
+                if res.status_code == 200:
+                    data = res.json()
+                    ans = data.get("answer") or data.get("response") or data.get("generated_text")
+                    if ans and len(ans) > 20:
+                        return ans.strip()
+            except Exception as e:
+                print(f"[rag] HF Space LLM call notice: {e}")
+
+        # 3. OpenRouter API
         openrouter_key = os.getenv("OPENROUTER_API_KEY")
         if (self.provider in ["openrouter", "auto"]) and openrouter_key:
             try:
@@ -114,44 +170,37 @@ class LLMInterface:
                     "Content-Type": "application/json"
                 }
                 body = {
-                    "model": self.model_name,
+                    "model": os.getenv("OPENROUTER_MODEL", self.model_name),
                     "messages": [
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": prompt}
                     ],
-                    "temperature": 0.1
+                    "temperature": 0.2
                 }
-                res = requests.post(self.api_url, headers=headers, json=body, timeout=12)
+                res = requests.post(self.api_url, headers=headers, json=body, timeout=15)
                 if res.status_code == 200:
                     return res.json()["choices"][0]["message"]["content"].strip()
             except Exception as e:
-                print(f"[rag] OpenRouter call failed: {e}")
+                print(f"[rag] OpenRouter call notice: {e}")
 
-        if self.provider in ["ollama", "auto"]:
-            try:
-                res = requests.post(
-                    "http://localhost:11434/api/generate",
-                    json={"model": "gpt-oss-20b", "prompt": prompt, "system": system_prompt, "stream": False},
-                    timeout=5
-                )
-                if res.status_code == 200:
-                    return res.json().get("response", "").strip()
-            except Exception:
-                pass
-
+        # 4. Deterministic conversational synthesis fallback
         return self._local_grounded_synthesis(prompt)
 
     def _local_grounded_synthesis(self, prompt: str) -> str:
         if "No patient medical records were retrieved" in prompt:
-            return "No relevant information was found in the available records."
+            return "No relevant medical information was found in your available records for this question."
 
         if "PATIENT MEDICAL CONTEXT:" in prompt:
             ctx = prompt.split("PATIENT MEDICAL CONTEXT:")[1].split("INSTRUCTIONS:")[0].strip()
             if not ctx or "No patient medical records" in ctx:
-                return "No relevant information was found in the available records."
-            return f"Based strictly on the patient's records:\n{ctx}"
+                return "No relevant medical information was found in your available records for this question."
+            return (
+                "Hello! Based on your verified medical records on file, here is a summary of the relevant details:\n\n"
+                f"{ctx}\n\n"
+                "Please consult your healthcare provider if you have any questions about adjusting your medications."
+            )
 
-        return "No relevant information was found in the available records."
+        return "No relevant medical records found for this query."
 
 
 class GroundedRAG:
@@ -167,13 +216,13 @@ class GroundedRAG:
         for i, doc in enumerate(retrieved_docs, start=1):
             doc_id = str(doc.get("document_id", "UNKNOWN"))
             raw_date = str(doc.get("date", ""))
-            date_str = "Undated Note" if raw_date in ["1970-01-01", "", None] else raw_date
-            doc_type = str(doc.get("document_type", "Record"))
+            date_str = "Recent Record" if raw_date in ["1970-01-01", "", None] else raw_date
+            doc_type = str(doc.get("document_type", "Record")).replace("_", " ").title()
             needs_review = doc.get("needs_review", False)
 
-            review_flag = " [NEEDS HUMAN REVIEW - LOW CONFIDENCE EXTRACTION]" if needs_review else ""
+            review_flag = " [NEEDS REVIEW]" if needs_review else ""
 
-            header = f"[Source {i}: {doc_id}, Date: {date_str} | Type: {doc_type}{review_flag}]"
+            header = f"### [Document {i}: {doc_id} • {doc_type} ({date_str}){review_flag}]"
             content = str(doc.get("searchable_text") or doc.get("ocr") or "")
 
             blocks.append(f"{header}\n{content}")
@@ -189,7 +238,7 @@ class GroundedRAG:
 
         if not retrieved_docs:
             return {
-                "answer": "No relevant information was found in the available records.",
+                "answer": "I couldn't find any relevant clinical records in your file regarding this question. Please make sure your records are uploaded or check with your doctor.",
                 "sources": [],
                 "confidence_warning": False,
                 "is_grounded": True
@@ -198,21 +247,22 @@ class GroundedRAG:
         context_str = self.format_context(retrieved_docs)
 
         system_prompt = (
-            "You are HealthVault AI's Clinical Assistant. Answer the doctor's query STRICTLY "
-            "using the provided patient medical context.\n"
-            "CRITICAL RULES:\n"
-            "1. Do NOT guess, extrapolate, or invent medical facts.\n"
-            "2. If context does not contain the answer, say: 'No relevant information was found in the available records.'\n"
-            "3. If no allergy is mentioned, state 'No allergy information was found in the available records.'\n"
-            "4. Cite every fact using [Source N: DOC-XXX, Date: YYYY-MM-DD].\n"
-            "5. Do NOT make unauthorized treatment recommendations."
+            "You are HealthVault AI, a warm, knowledgeable, and empathetic medical assistant helping a patient understand their medical records.\n"
+            "Your task is to answer the patient's question directly, clearly, and conversationally in plain English (ChatGPT style).\n\n"
+            "COMMUNICATION GUIDELINES:\n"
+            "1. Answer the patient's specific question warmly and directly in the first paragraph.\n"
+            "2. Explain diagnoses, symptoms, and medical terms in clear, everyday words without heavy jargon.\n"
+            "3. For medications, clearly outline: the medication name, exact dosage, schedule (e.g. morning, bedtime, before/after meals), and why it helps.\n"
+            "4. Provide actionable advice and precautions (e.g. inhaler techniques, rinsing mouth, diet, or monitoring blood pressure).\n"
+            "5. Rely STRICTLY on the facts provided in the Patient Medical Context. Do not invent or hallucinate unmentioned medications or values.\n"
+            "6. Close with a caring sentence and note that this is for understanding records and not a replacement for advice from their physician."
         )
 
         user_prompt = (
-            f"DOCTOR QUESTION: {query}\n"
+            f"PATIENT'S QUESTION: {query}\n"
             f"PATIENT ID: {patient_id}\n\n"
-            f"PATIENT MEDICAL CONTEXT:\n{context_str}\n\n"
-            f"INSTRUCTIONS:\nAnswer concisely with exact citations."
+            f"PATIENT MEDICAL CONTEXT (VERIFIED RECORDS):\n{context_str}\n\n"
+            f"INSTRUCTIONS:\nProvide a conversational, empathetic, and clear explanation in plain English."
         )
 
         raw_answer = self.llm.generate(user_prompt, system_prompt=system_prompt)

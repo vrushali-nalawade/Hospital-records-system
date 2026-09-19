@@ -387,6 +387,36 @@ def ask_patient_question(patient_id: str, question: str, document_id: Optional[s
                     "abstained": True
                 }
 
+            # 1. Attempt Gemini Generative RAG first
+            try:
+                from rag import GroundedRAG
+                rag_docs = []
+                for doc in docs:
+                    parsed = call_person2_ocr_nlp(get_document_path(doc.storage_path), patient_id, doc.document_id)
+                    rag_docs.append({
+                        "document_id": doc.document_id,
+                        "visit_id": doc.visit_id or f"VIS_{doc.document_id}",
+                        "date": parsed.get("date") or doc.created_at.strftime("%Y-%m-%d"),
+                        "document_type": doc.document_type or parsed.get("document_type", "record"),
+                        "medications": ", ".join(parsed.get("medications", [])),
+                        "diagnoses": ", ".join(parsed.get("diagnoses", [])),
+                        "lab_results": str(parsed.get("lab_results", [])),
+                        "ocr": parsed.get("raw_text", ""),
+                        "searchable_text": f"Diagnosis: {', '.join(parsed.get('diagnoses', []))}. Medications: {', '.join(parsed.get('medications', []))}. Clinical Text: {parsed.get('raw_text', '')}",
+                        "confidence": doc.confidence or 1.0,
+                        "needs_review": doc.needs_review or False
+                    })
+                rag = GroundedRAG()
+                rag_res = rag.generate_answer(question, patient_id, rag_docs)
+                if rag_res.get("answer") and len(rag_res.get("answer", "")) > 40 and "No relevant medical information" not in rag_res.get("answer", ""):
+                    return {
+                        "answer": rag_res["answer"],
+                        "sources": rag_res["sources"],
+                        "abstained": False
+                    }
+            except Exception as rag_err:
+                print(f"[ai_service] GroundedRAG notice ({rag_err}). Using built-in conversational synthesizer.")
+
             sources = []
             summaries = []
             q_lower = question.lower()
