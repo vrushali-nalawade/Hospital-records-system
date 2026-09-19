@@ -23,6 +23,7 @@ export default function RecordViewer({
   const router = useRouter();
   const [loadingUrl, setLoadingUrl] = useState(false);
   const [showInlinePreview, setShowInlinePreview] = useState(true);
+  const [deleting, setDeleting] = useState(false);
 
   // Compute best available document source URL
   const getDocumentSrc = () => {

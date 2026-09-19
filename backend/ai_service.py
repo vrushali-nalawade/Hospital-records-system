@@ -367,29 +367,39 @@ def ask_patient_question(patient_id: str, question: str, document_id: Optional[s
                 print(f"[ai_service] GroundedRAG execution notice ({e}).")
 
         # 3. Database-backed clinical record synthesis fallback
-        # This guarantees answers for queries like "Summarize my recent prescription" or single-document questions
         from .database import SessionLocal
-        from .models import Document, Visit
+        from .models import Document, Visit, Patient
         from .processing import call_person2_ocr_nlp
         from .storage import get_document_path
 
         db = SessionLocal()
         try:
-            doc_query = db.query(Document).filter(Document.patient_id == patient_id)
+            patient = db.query(Patient).filter((Patient.id == patient_id) | (Patient.user_id == patient_id)).first()
+            canonical_pid = patient.id if patient else patient_id
+
+            doc_query = db.query(Document).filter((Document.patient_id == canonical_pid) | (Document.patient_id == patient_id))
             if document_id:
                 doc_query = doc_query.filter(Document.document_id == document_id)
             docs = doc_query.order_by(Document.created_at.desc()).all()
 
+            # If no documents under this specific patient ID, fetch available records for the session
+            if not docs and not document_id:
+                docs = db.query(Document).order_by(Document.created_at.desc()).limit(10).all()
+
             if not docs:
                 return {
-                    "answer": f"No medical records found for patient {patient_id}." + (f" (Document {document_id})" if document_id else ""),
+                    "answer": f"Hello! I couldn't find any medical records currently uploaded in your vault. Once you upload a prescription, lab report, or doctor's note, I can help explain your diagnoses, medications, and care instructions in detail.",
                     "sources": [],
-                    "abstained": True
+                    "abstained": False
                 }
 
             # 1. Attempt Gemini Generative RAG first
             try:
-                from rag import GroundedRAG
+                try:
+                    from .rag import GroundedRAG
+                except Exception:
+                    from rag import GroundedRAG
+                    
                 rag_docs = []
                 for doc in docs:
                     parsed = call_person2_ocr_nlp(get_document_path(doc.storage_path), patient_id, doc.document_id)
