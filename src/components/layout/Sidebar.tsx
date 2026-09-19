@@ -24,8 +24,6 @@ const patientLinks = [
   { href: "/patient/records", label: "medicalRecords", icon: FileText },
   { href: "/patient/upload", label: "uploadRecord", icon: Upload },
   { href: "/patient/history", label: "medicalHistory", icon: History },
-  { href: "/patient/consent", label: "consentManagement", icon: ShieldCheck },
-  { href: "/patient/access-history", label: "accessHistory", icon: ListChecks },
   { href: "/patient/ai-assistant", label: "aiAssistant", icon: Bot },
   { href: "/patient/profile", label: "profile", icon: User },
 ] as const;

@@ -71,18 +71,6 @@ export default function LandingPage() {
           </nav>
           <div className="flex items-center gap-3">
             <Link
-              href="/doctor-login"
-              className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 sm:block"
-            >
-              Doctor Login
-            </Link>
-            <Link
-              href="/doctor-register"
-              className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 sm:block"
-            >
-              Doctor Register
-            </Link>
-            <Link
               href="/login"
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
@@ -106,13 +94,12 @@ export default function LandingPage() {
               <ShieldCheck className="h-3.5 w-3.5" /> Unified Digital Health Record Locker
             </span>
             <h1 className="mt-5 text-4xl font-bold leading-tight tracking-tight text-slate-900 sm:text-5xl">
-              Securely organize, understand, and control access to your{" "}
+              Securely organize, understand, and manage your{" "}
               <span className="text-teal-600">digital health records</span>.
             </h1>
             <p className="mt-5 max-w-lg text-lg text-slate-600">
               One locker for prescriptions, reports, and scans — with AI that helps you
-              understand what&apos;s in them, and consent tools that keep you in charge of
-              who can see what.
+              understand what&apos;s in them in plain, everyday language.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
@@ -122,10 +109,10 @@ export default function LandingPage() {
                 Create your locker
               </Link>
               <Link
-                href="/doctor-login"
+                href="/login"
                 className="rounded-lg border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
               >
-                I&apos;m a doctor
+                Sign In
               </Link>
             </div>
             <p className="mt-4 text-xs text-slate-400">

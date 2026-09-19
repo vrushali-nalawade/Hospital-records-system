@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -93,12 +93,6 @@ export default function PatientLoginPage() {
           Don&apos;t have an account?{" "}
           <Link href="/register" className="font-medium text-teal-600 hover:underline">
             {t("register")}
-          </Link>
-        </p>
-        <p className="mt-2 text-center text-sm text-slate-500">
-          Are you a doctor?{" "}
-          <Link href="/doctor-login" className="font-medium text-teal-600 hover:underline">
-            {t("doctorLogin")}
           </Link>
         </p>
       </div>
