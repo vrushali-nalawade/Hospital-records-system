@@ -61,7 +61,12 @@ function explainRecordInPlainWords(record: MedicalRecord): string {
       `### 💡 Practical Advice for Recovery\n` +
       `• **Finish all antibiotics:** Always complete the entire 14-day antibiotic course even if you start feeling completely better earlier.\n` +
       `• **Dietary guidelines:** Avoid spicy, fried, or highly acidic foods (like citrus, vinegar, and tomato-based dishes). Avoid caffeine, alcohol, and smoking while your stomach recovers.\n` +
-      `• **Meal habits:** Eat smaller, more frequent meals rather than large, heavy meals.`
+      `• **Meal habits:** Eat smaller, more frequent meals rather than large, heavy meals.\n\n` +
+      `**💡 Suggested Questions to Ask Next:**\n` +
+      `• *"What is the 14-day triple therapy medication schedule?"*\n` +
+      `• *"What foods and drinks should I avoid during recovery?"*\n` +
+      `• *"Are there any side effects with these antibiotics?"*\n` +
+      `• *"When should I schedule a follow-up test for H. pylori?"*`
     );
   }
 
@@ -83,7 +88,12 @@ function explainRecordInPlainWords(record: MedicalRecord): string {
       `   • **Purpose:** Low-dose blood thinner to prevent clot formation and maintain cardiac health.\n\n` +
       `### 💡 Practical Advice\n` +
       `• Maintain a low-sodium (low salt) diet and stay well hydrated.\n` +
-      `• Check and log your blood pressure once or twice a week at home.`
+      `• Check and log your blood pressure once or twice a week at home.\n\n` +
+      `**💡 Suggested Questions to Ask Next:**\n` +
+      `• *"What is my target blood pressure range?"*\n` +
+      `• *"What are the exact dosages and timings for my heart medicines?"*\n` +
+      `• *"What low-sodium diet and lifestyle tips should I follow?"*\n` +
+      `• *"What questions should I ask my cardiologist at my next visit?"*`
     );
   }
 
@@ -100,7 +110,12 @@ function explainRecordInPlainWords(record: MedicalRecord): string {
       `• **Levothyroxine Sodium 75 mcg (Thyroid Hormone Supplement)**\n` +
       `  • **Dosage:** 1 tablet once daily.\n` +
       `  • **When to take:** Take first thing in the morning on an **empty stomach** with a full glass of water, at least 30 to 60 minutes before breakfast or morning coffee.\n` +
-      `  • **Purpose:** Replaces missing thyroid hormone to restore normal metabolism, energy levels, and body warmth.`
+      `  • **Purpose:** Replaces missing thyroid hormone to restore normal metabolism, energy levels, and body warmth.\n\n` +
+      `**💡 Suggested Questions to Ask Next:**\n` +
+      `• *"How and when should I take Levothyroxine?"*\n` +
+      `• *"What foods or supplements interfere with thyroid absorption?"*\n` +
+      `• *"What are the symptoms of an underactive thyroid?"*\n` +
+      `• *"When should I repeat my TSH blood test?"*`
     );
   }
 
@@ -119,7 +134,12 @@ function explainRecordInPlainWords(record: MedicalRecord): string {
       `   • **Purpose:** Fast-acting bronchodilator for instant relief during acute chest tightness.\n\n` +
       `3. **Montelukast 10 mg (Oral Tablet)**\n` +
       `   • **Usage:** 1 tablet once daily at bedtime.\n` +
-      `   • **Purpose:** Blocks inflammatory chemicals (leukotrienes) that trigger airway narrowing.`
+      `   • **Purpose:** Blocks inflammatory chemicals (leukotrienes) that trigger airway narrowing.\n\n` +
+      `**💡 Suggested Questions to Ask Next:**\n` +
+      `• *"How do I use the inhaler and spacer correctly?"*\n` +
+      `• *"What are the main asthma triggers to avoid?"*\n` +
+      `• *"Why is Montelukast taken at bedtime?"*\n` +
+      `• *"When should I use a rescue inhaler?"*`
     );
   }
 
@@ -132,7 +152,12 @@ function explainRecordInPlainWords(record: MedicalRecord): string {
       `### 🔬 Key Lab Findings\n` +
       `• **HbA1c (Hemoglobin A1c):** 7.2% *(This reflects your average blood sugar levels over the past 2 to 3 months, showing stable glycemic control)*.\n\n` +
       `### 💊 Prescribed Medications\n` +
-      `• **Metformin (500 mg or 1000 mg twice daily)**: Take with meals to help your cells utilize insulin more efficiently and keep blood sugar steady.`
+      `• **Metformin (500 mg or 1000 mg twice daily)**: Take with meals to help your cells utilize insulin more efficiently and keep blood sugar steady.\n\n` +
+      `**💡 Suggested Questions to Ask Next:**\n` +
+      `• *"What is my prescribed Metformin dosage and timing?"*\n` +
+      `• *"What is a healthy target HbA1c range?"*\n` +
+      `• *"What dietary recommendations should I follow?"*\n` +
+      `• *"How often should I monitor my blood glucose?"*`
     );
   }
 
@@ -146,7 +171,12 @@ function explainRecordInPlainWords(record: MedicalRecord): string {
     `Here is a clear explanation of your **${docType}** (dated ${dateStr}) in simple words:\n\n` +
     `### 📋 Summary of Findings\n` +
     (fields || "• Your record contains clinical notes and prescription details from your healthcare provider.") +
-    `\n\n_Extracted directly from your medical record for your personal understanding._`
+    `\n\n_Extracted directly from your medical record for your personal understanding._\n\n` +
+    `**💡 Suggested Questions to Ask Next:**\n` +
+    `• *"Summarize this document in simple terms."*\n` +
+    `• *"What medications and dosages are prescribed here?"*\n` +
+    `• *"What diagnosis is documented in this record?"*\n` +
+    `• *"Are there any special instructions or warnings?"*`
   );
 }
 

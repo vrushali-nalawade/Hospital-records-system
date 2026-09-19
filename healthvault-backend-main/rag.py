@@ -229,69 +229,61 @@ class LLMInterface:
         ctx_lower = ctx.lower()
 
         # Identify medical specialty / clinical context
-        is_cardio = "hypertension" in ctx_lower or "cardiology" in ctx_lower or "telmisartan" in ctx_lower or "blood pressure" in ctx_lower
-        is_pulmo = "asthma" in ctx_lower or "pulmonology" in ctx_lower or "inhaler" in ctx_lower or "budesonide" in ctx_lower
-        is_gastro = "pylori" in ctx_lower or "gastritis" in ctx_lower or "clarithromycin" in ctx_lower or "pantoprazole" in ctx_lower
-        is_thyroid = "thyroid" in ctx_lower or "levothyroxine" in ctx_lower or "tsh" in ctx_lower
-        is_diabetes = "diabetes" in ctx_lower or "metformin" in ctx_lower or "hba1c" in ctx_lower or "glucose" in ctx_lower
+        is_gastro = any(k in ctx_lower for k in ["pylori", "gastritis", "clarithromycin", "pantoprazole", "amoxicillin", "gastro", "ulcer", "discharge"])
+        is_pulmo = any(k in ctx_lower for k in ["asthma", "pulmonology", "inhaler", "budesonide", "formoterol", "montelukast", "respiratory"])
+        is_thyroid = any(k in ctx_lower for k in ["thyroid", "levothyroxine", "tsh", "hypothyroid"])
+        is_diabetes = any(k in ctx_lower for k in ["diabetes", "metformin", "hba1c", "glucose", "insulin"])
+        is_cardio = any(k in ctx_lower for k in ["hypertension", "cardiology", "telmisartan", "atorvastatin", "blood pressure", "cholesterol"]) and not is_gastro
 
         # Identify question intent
         is_diag_query = any(k in question for k in ["diagnosis", "diagnosed", "condition", "what is", "disease", "illness", "problem"])
         is_med_query = any(k in question for k in ["medication", "medicine", "medications", "medicines", "drug", "drugs", "dose", "dosage", "prescription", "take", "taking", "tablets"])
+        is_lab_query = any(k in question for k in ["blood", "report", "lab", "test", "results", "reading", "value", "panel"])
         
         response_sections = []
+        suggestions = []
 
-        # 1. Answer based on specific intent
-        if is_cardio:
-            if is_diag_query and not is_med_query:
+        # 1. Gastroenterology
+        if is_gastro:
+            if is_diag_query:
                 response_sections.append(
-                    "Hello! Based on your verified cardiology records, the documented diagnosis is **Essential Hypertension with Mixed Dyslipidemia**.\n\n"
+                    "Hello! Based on your gastroenterology record, the documented diagnosis is **H. Pylori Gastritis with Peptic Ulcer Disease**.\n\n"
                     "**What this means in plain words:**\n"
-                    "• **Hypertension (High Blood Pressure):** The force of the blood pushing against your artery walls is consistently higher than normal. Your recorded blood pressure is **138/88 mmHg**.\n"
-                    "• **Dyslipidemia:** Your lipid levels (cholesterol) are mildly elevated (**Total Cholesterol: 218 mg/dL**), which is being actively managed to protect your heart and blood vessels."
-                )
-                response_sections.append(
-                    "**Prescribed Treatment Plan:**\n"
-                    "• **Telmisartan 40mg:** 1 tablet daily in the morning after breakfast (controls blood pressure).\n"
-                    "• **Atorvastatin 20mg:** 1 tablet daily at bedtime (lowers cholesterol and protects heart arteries).\n\n"
-                    "**Lifestyle Advice:** Maintain a low-sodium diet (< 2g/day), do 30 minutes of moderate aerobic exercise daily, and keep a regular home blood pressure log."
+                    "A bacterial infection (*Helicobacter pylori*) in the stomach has caused inflammation and irritation of the stomach lining, leading to peptic ulcer symptoms."
                 )
             elif is_med_query:
                 response_sections.append(
-                    "Hello! Here is a breakdown of the medications and dosages prescribed in your cardiology record:\n\n"
-                    "1. **Telmisartan 40 mg (Tablet)**\n"
-                    "   • **Dosage:** 1 tablet once daily in the morning (after breakfast).\n"
-                    "   • **Purpose:** Relaxes blood vessels to keep your blood pressure well-controlled.\n\n"
-                    "2. **Atorvastatin 20 mg (Tablet)**\n"
-                    "   • **Dosage:** 1 tablet once daily at bedtime.\n"
-                    "   • **Purpose:** Lowers cholesterol levels to prevent plaque buildup in blood vessels."
+                    "Hello! Here is the prescribed **14-Day Triple Therapy** medication schedule:\n\n"
+                    "1. **Pantoprazole 40 mg (Acid Reducer):** 1 tablet twice daily, taken 30 minutes before meals.\n"
+                    "2. **Amoxicillin 1000 mg (Antibiotic):** 1 tablet twice daily with meals.\n"
+                    "3. **Clarithromycin 500 mg (Antibiotic):** 1 tablet twice daily with meals.\n\n"
+                    "**Crucial Tip:** Complete the full 14-day course without skipping any doses."
                 )
+            elif is_lab_query:
                 response_sections.append(
-                    "**Important Instructions:**\n"
-                    "• Take Telmisartan consistently at the same time each morning.\n"
-                    "• Keep a low-sodium diet and record your blood pressure readings regularly."
+                    "Hello! In your gastroenterology records, diagnostic findings confirmed **H. Pylori bacterial infection** with gastric mucosal inflammation. Routine complete blood counts were reviewed during your discharge consultation."
                 )
             else:
                 response_sections.append(
-                    "Hello! Here is a clear summary of your cardiology record on file:\n\n"
-                    "• **Diagnosis:** Essential Hypertension & Mixed Dyslipidemia\n"
-                    "• **Recorded Vitals:** Blood Pressure: 138/88 mmHg | Total Cholesterol: 218 mg/dL\n"
-                    "• **Medications:** Telmisartan 40mg (1 tab morning) & Atorvastatin 20mg (1 tab bedtime)\n"
-                    "• **Guidance:** Maintain a low-salt diet and track daily blood pressure."
+                    "Hello! Here is the summary of your gastroenterology discharge record:\n\n"
+                    "• **Diagnosis:** H. Pylori Gastritis & Peptic Ulcer Disease\n"
+                    "• **Treatment:** 14-Day Triple Therapy (Pantoprazole 40mg, Amoxicillin 1000mg, Clarithromycin 500mg)\n"
+                    "• **Dietary Advice:** Avoid spicy, fried, or acidic foods, caffeine, NSAIDs, and alcohol while the stomach lining heals."
                 )
+            suggestions = [
+                "What is my daily medication schedule for the triple therapy?",
+                "What foods and drinks should I avoid during recovery?",
+                "Are there any side effects with these antibiotics?",
+                "When should I get re-tested for H. pylori?"
+            ]
 
+        # 2. Pulmonology
         elif is_pulmo:
-            if is_diag_query and not is_med_query:
+            if is_diag_query:
                 response_sections.append(
                     "Hello! Based on your pulmonary records, the documented diagnosis is **Moderate Persistent Asthma**.\n\n"
                     "**What this means in plain words:**\n"
                     "Asthma is a chronic condition where the breathing airways become inflamed, sensitive, and temporarily narrowed, which can lead to symptoms like wheezing, chest tightness, shortness of breath, or coughing."
-                )
-                response_sections.append(
-                    "**Prescribed Treatment:**\n"
-                    "• **Budesonide + Formoterol Inhaler (200/6 mcg):** 2 puffs twice daily using a spacer device.\n"
-                    "• **Montelukast 10 mg:** 1 tablet once daily at bedtime.\n\n"
-                    "**Key Care Tips:** Always rinse your mouth with water and spit it out after using your inhaler to prevent throat irritation. Keep a rescue inhaler handy and avoid dust or smoke."
                 )
             elif is_med_query:
                 response_sections.append(
@@ -309,18 +301,48 @@ class LLMInterface:
                     "• **Medications:** Budesonide/Formoterol Inhaler 200/6mcg (2 puffs twice daily) + Montelukast 10mg (1 tab at bedtime)\n"
                     "• **Advice:** Rinse mouth after inhalation and carry a rescue inhaler at all times."
                 )
+            suggestions = [
+                "How do I use the inhaler and spacer correctly?",
+                "What are the main asthma triggers to avoid?",
+                "Why is Montelukast taken at bedtime?",
+                "When should I use a rescue inhaler?"
+            ]
 
-        elif is_gastro:
-            response_sections.append(
-                "Hello! Based on your gastroenterology record, the documented diagnosis is **H. Pylori Gastritis & Peptic Ulcer Disease**.\n\n"
-                "**What this means in plain words:** A bacterial infection in the stomach lining causing irritation and inflammation.\n\n"
-                "**Prescribed 14-Day Triple Therapy Regimen:**\n"
-                "• **Pantoprazole 40 mg:** 1 tablet twice daily, taken 30 minutes before meals.\n"
-                "• **Amoxicillin 1000 mg:** 1 tablet twice daily with meals.\n"
-                "• **Clarithromycin 500 mg:** 1 tablet twice daily with meals.\n\n"
-                "**Crucial Tip:** Complete the entire 14-day antibiotic course without skipping doses. Avoid spicy foods, caffeine, and NSAID pain relievers."
-            )
+        # 3. Cardiology
+        elif is_cardio:
+            if is_diag_query and not is_med_query:
+                response_sections.append(
+                    "Hello! Based on your verified cardiology records, the documented diagnosis is **Essential Hypertension with Mixed Dyslipidemia**.\n\n"
+                    "**What this means in plain words:**\n"
+                    "• **Hypertension (High Blood Pressure):** The force of the blood pushing against your artery walls is consistently higher than normal. Your recorded blood pressure is **138/88 mmHg**.\n"
+                    "• **Dyslipidemia:** Your lipid levels (cholesterol) are mildly elevated (**Total Cholesterol: 218 mg/dL**), which is being actively managed to protect your heart and blood vessels."
+                )
+            elif is_med_query:
+                response_sections.append(
+                    "Hello! Here is a breakdown of the medications and dosages prescribed in your cardiology record:\n\n"
+                    "1. **Telmisartan 40 mg (Tablet)**\n"
+                    "   • **Dosage:** 1 tablet once daily in the morning (after breakfast).\n"
+                    "   • **Purpose:** Relaxes blood vessels to keep your blood pressure well-controlled.\n\n"
+                    "2. **Atorvastatin 20 mg (Tablet)**\n"
+                    "   • **Dosage:** 1 tablet once daily at bedtime.\n"
+                    "   • **Purpose:** Lowers cholesterol levels to prevent plaque buildup in blood vessels."
+                )
+            else:
+                response_sections.append(
+                    "Hello! Here is a clear summary of your cardiology record on file:\n\n"
+                    "• **Diagnosis:** Essential Hypertension & Mixed Dyslipidemia\n"
+                    "• **Recorded Vitals:** Blood Pressure: 138/88 mmHg | Total Cholesterol: 218 mg/dL\n"
+                    "• **Medications:** Telmisartan 40mg (1 tab morning) & Atorvastatin 20mg (1 tab bedtime)\n"
+                    "• **Guidance:** Maintain a low-salt diet and track daily blood pressure."
+                )
+            suggestions = [
+                "What is my target blood pressure range?",
+                "What medications and dosages are prescribed?",
+                "What low-sodium diet tips should I follow?",
+                "When should I take Atorvastatin?"
+            ]
 
+        # 4. Thyroid
         elif is_thyroid:
             response_sections.append(
                 "Hello! Based on your endocrinology record, the documented diagnosis is **Primary Hypothyroidism**.\n\n"
@@ -329,7 +351,14 @@ class LLMInterface:
                 "• **Levothyroxine Sodium 50 mcg:** 1 tablet once daily in the morning on an empty stomach with a full glass of water.\n\n"
                 "**Important Instruction:** Wait at least 30 to 60 minutes before having breakfast, coffee, or tea, and avoid taking calcium or iron supplements within 4 hours of your dose."
             )
+            suggestions = [
+                "How and when should I take Levothyroxine?",
+                "What foods or supplements interfere with thyroid absorption?",
+                "What are the symptoms of underactive thyroid?",
+                "When should I repeat my TSH blood test?"
+            ]
 
+        # 5. Diabetes
         elif is_diabetes:
             response_sections.append(
                 "Hello! Based on your endocrinology record, the documented diagnosis is **Type 2 Diabetes Mellitus**.\n\n"
@@ -337,6 +366,12 @@ class LLMInterface:
                 "**Prescribed Medication:**\n"
                 "• **Metformin 500 mg:** 1 tablet twice daily with meals (breakfast and dinner) to support blood sugar management."
             )
+            suggestions = [
+                "What is my prescribed Metformin dosage and timing?",
+                "What is a healthy target HbA1c range?",
+                "What dietary recommendations should I follow?",
+                "How often should I monitor my blood glucose?"
+            ]
 
         else:
             response_sections.append(
@@ -344,6 +379,18 @@ class LLMInterface:
                 f"{ctx}\n\n"
                 "Please consult your healthcare provider for any questions about your diagnosis or medication schedule."
             )
+            suggestions = [
+                "Summarize my recent prescription.",
+                "What diagnosis is documented in my records?",
+                "What medications and dosages am I taking?",
+                "What questions should I ask my doctor?"
+            ]
+
+        # Append inline follow-up questions
+        response_sections.append(
+            "\n**💡 Suggested Questions to Ask Next:**\n" +
+            "\n".join([f"• *\"{s}\"*" for s in suggestions])
+        )
 
         response_sections.append("\n*Note: This explanation is for record understanding only and does not replace professional medical advice from your physician.*")
         return "\n\n".join(response_sections)
@@ -401,14 +448,15 @@ class GroundedRAG:
             "3. For medications, clearly outline: the medication name, exact dosage, schedule (e.g. morning, bedtime, before/after meals), and why it helps.\n"
             "4. Provide actionable advice and precautions (e.g. inhaler techniques, rinsing mouth, diet, or monitoring blood pressure).\n"
             "5. Rely STRICTLY on the facts provided in the Patient Medical Context. Do not invent or hallucinate unmentioned medications or values.\n"
-            "6. Close with a caring sentence and note that this is for understanding records and not a replacement for advice from their physician."
+            "6. Always end your response with a section titled '**💡 Suggested Questions to Ask Next:**' containing 3 to 4 relevant follow-up questions the patient can ask.\n"
+            "7. Close with a caring sentence and note that this is for understanding records and not a replacement for advice from their physician."
         )
 
         user_prompt = (
             f"PATIENT'S QUESTION: {query}\n"
             f"PATIENT ID: {patient_id}\n\n"
             f"PATIENT MEDICAL CONTEXT (VERIFIED RECORDS):\n{context_str}\n\n"
-            f"INSTRUCTIONS:\nProvide a conversational, empathetic, and clear explanation in plain English."
+            f"INSTRUCTIONS:\nProvide a conversational, empathetic, and clear explanation in plain English, ending with suggested follow-up questions."
         )
 
         raw_answer = self.llm.generate(user_prompt, system_prompt=system_prompt)
