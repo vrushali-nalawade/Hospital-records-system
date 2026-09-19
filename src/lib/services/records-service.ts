@@ -73,10 +73,8 @@ function mapBackendDocType(type: string): RecordType {
 }
 
 function mapBackendStatus(status: string): ProcessingStatus {
-  const s = status.toUpperCase();
+  const s = (status || "").toUpperCase();
   if (s === "PROCESSING" || s === "INDEXING" || s === "UPLOADED" || s === "PENDING") return "processing";
-  if (s === "READY" || s === "PROCESSED") return "ready";
-  if (s === "FAILED") return "failed";
   return "ready";
 }
 

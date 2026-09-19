@@ -44,21 +44,21 @@ export default function PatientRecordsPage() {
   };
 
   const filtered = useMemo(() => {
-    let list = records;
-    if (typeFilter !== "all") list = list.filter((r) => r.recordType === typeFilter);
+    let list = Array.isArray(records) ? records.filter(Boolean) : [];
+    if (typeFilter !== "all") list = list.filter((r) => r && r.recordType === typeFilter);
     if (query.trim()) {
       const q = query.toLowerCase();
       list = list.filter(
         (r) =>
-          r.fileName.toLowerCase().includes(q) ||
-          recordTypeLabel[r.recordType].toLowerCase().includes(q)
+          (r?.fileName || "").toLowerCase().includes(q) ||
+          (recordTypeLabel[r?.recordType] || "Medical Record").toLowerCase().includes(q)
       );
     }
-    return [...list].sort((a, b) =>
-      sort === "newest"
-        ? a.createdAt < b.createdAt ? 1 : -1
-        : a.createdAt > b.createdAt ? 1 : -1
-    );
+    return [...list].sort((a, b) => {
+      const aTime = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bTime = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return sort === "newest" ? bTime - aTime : aTime - bTime;
+    });
   }, [records, query, typeFilter, sort]);
 
   return (

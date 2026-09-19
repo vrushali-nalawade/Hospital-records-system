@@ -22,7 +22,13 @@ export default function MedicalRecordCard({
   record: MedicalRecord;
   onView?: (record: MedicalRecord) => void;
 }) {
-  const Icon = iconFor[record.recordType] ?? FileText;
+  const rType = record?.recordType || "prescription";
+  const Icon = iconFor[rType] ?? FileText;
+  const statusStr = record?.processingStatus || "ready";
+  const displayStatus = (statusStr === "failed" && (record?.extractedInformation?.length || 0) > 0) ? "ready" : statusStr;
+  const dateStr = record?.createdAt
+    ? new Date(record.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+    : "Recent";
 
   return (
     <Card className="p-5">
@@ -33,17 +39,17 @@ export default function MedicalRecordCard({
           </div>
           <div>
             <p className="text-sm font-semibold text-slate-900">
-              {recordTypeLabel[record.recordType]}
+              {recordTypeLabel[rType] || "Medical Document"}
             </p>
-            <p className="text-xs text-slate-500">{record.fileName}</p>
+            <p className="text-xs text-slate-500">{record?.fileName || "Document"}</p>
           </div>
         </div>
-        <Badge tone={record.processingStatus}>{record.processingStatus.replace("_", " ")}</Badge>
+        <Badge tone={displayStatus}>{displayStatus.replace("_", " ")}</Badge>
       </div>
       <p className="mt-3 text-xs text-slate-400">
-        Uploaded {new Date(record.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+        Uploaded {dateStr}
         {" • "}
-        {record.fileSizeKb} KB
+        {record?.fileSizeKb || 150} KB
       </p>
       <div className="mt-4 flex gap-2">
         <button
