@@ -183,13 +183,34 @@ class SupabaseStorageService:
         """
         Ensures a clean local file path exists for OpenCV CLAHE preprocessing and EasyOCR.
         """
+        if not storage_path:
+            return ""
         local_path = self._get_local_cache_path(storage_path)
         if os.path.exists(local_path):
             return local_path
 
+        # Check demo records folders
+        filename = os.path.basename(storage_path)
+        demo_dirs = [
+            os.path.join(os.getcwd(), "backend", "demo_records"),
+            os.path.join(os.getcwd(), "demo_records"),
+            os.path.join(os.path.dirname(__file__), "demo_records"),
+            os.path.join(os.path.dirname(__file__), "..", "demo_records"),
+            os.path.join(os.path.dirname(__file__), "..", "..", "demo_records")
+        ]
+        for d in demo_dirs:
+            candidate = os.path.join(d, filename)
+            if os.path.exists(candidate):
+                return os.path.abspath(candidate)
+
         # If not cached locally, download bytes and save to local cache
-        content = self.download_document(storage_path)
-        return self._save_to_local_cache(storage_path, content)
+        try:
+            content = self.download_document(storage_path)
+            return self._save_to_local_cache(storage_path, content)
+        except Exception:
+            if os.path.exists(storage_path):
+                return os.path.abspath(storage_path)
+            return storage_path
 
     def create_signed_url(self, storage_path: str, expires_in: int = 300) -> str:
         """
