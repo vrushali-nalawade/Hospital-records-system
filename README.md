@@ -22,24 +22,44 @@
 
 <div align="center">
 
-### 🖥️ 1. Patient Dashboard & Health Locker
-<!-- ADD YOUR DASHBOARD SCREENSHOT BELOW -->
-![HealthVault Dashboard](https://via.placeholder.com/900x500.png?text=Add+Dashboard+Screenshot+Here)
-*Central dashboard displaying uploaded medical documents, visit timeline, and quick-access vitals.*
+### 🌐 1. Landing Page & Overview
+![Landing Page](./docs/images/landing_page.png)
+*Modern, glassmorphic landing page highlighting patient digital lockers, consent tools, and AI comprehension.*
 
 <br/>
 
-### 📄 2. Smart Document Ingestion & Structured NER View
-<!-- ADD YOUR DOCUMENT EXTRACTION / NER SCREENSHOT BELOW -->
-![Document Extraction View](https://via.placeholder.com/900x500.png?text=Add+Document+Ingestion+and+NER+Screenshot+Here)
-*Real-time OCR extraction with OpenCV CLAHE pre-processing, structured lab values, and medication breakdown.*
+### 🔐 2. Patient Authentication & Secure Onboarding
+<p float="left">
+  <img src="./docs/images/patient_login.png" width="48%" alt="Patient Login" />
+  <img src="./docs/images/patient_registration.png" width="48%" alt="Patient Registration" />
+</p>
+*Secure Firebase user registration and token-based authentication for patient privacy.*
 
 <br/>
 
-### 💬 3. AI Clinical Assistant & Grounded Q&A
-<!-- ADD YOUR CHAT / RAG Q&A SCREENSHOT BELOW -->
+### 🖥️ 3. Patient Dashboard & Health Locker
+![HealthVault Dashboard](./docs/images/dashboard.png)
+*Central dashboard displaying uploaded medical documents, consent status, doctor access logs, and recent activity.*
+
+<br/>
+
+### 📤 4. Document Ingestion & Categorization
+![Upload Medical Record](./docs/images/upload_record.png)
+*Upload interface supporting Prescriptions, Blood Reports, Lab Reports, Medical Scans, and Discharge Summaries.*
+
+<br/>
+
+### 💬 5. AI Clinical Assistant & Grounded Q&A
+<!-- ADD YOUR CHAT / RAG Q&A SCREENSHOT HERE -->
 ![AI Clinical Assistant](https://via.placeholder.com/900x500.png?text=Add+AI+Chat+and+Citations+Screenshot+Here)
 *Grounded question-answering powered by Gemini 1.5 Flash with source citations and verified confidence scores.*
+
+<br/>
+
+### 📄 6. Extracted Medical NER & Structured Lab Trends
+<!-- ADD YOUR NER / LAB VALUES SCREENSHOT HERE -->
+![Document Extraction View](https://via.placeholder.com/900x500.png?text=Add+Extracted+Lab+Trends+Screenshot+Here)
+*Real-time OCR extraction with structured lab values, reference ranges, and medication frequency breakdown.*
 
 </div>
 
