@@ -22,9 +22,9 @@
 
 <div align="center">
 
-### 🌐 1. Landing Page & Overview
+### 🌐 1. Landing Page & Product Overview
 ![Landing Page](./docs/images/landing_page.png)
-*Modern, glassmorphic landing page highlighting patient digital lockers, consent tools, and AI comprehension.*
+*Modern, glassmorphic landing page highlighting patient digital health lockers, consent tools, and AI comprehension.*
 
 <br/>
 
@@ -33,7 +33,7 @@
   <img src="./docs/images/patient_login.png" width="48%" alt="Patient Login" />
   <img src="./docs/images/patient_registration.png" width="48%" alt="Patient Registration" />
 </p>
-*Secure Firebase user registration and token-based authentication for patient privacy.*
+*Secure Firebase user registration and token-based authentication with HIPAA-aligned patient data isolation.*
 
 <br/>
 
@@ -49,19 +49,86 @@
 
 <br/>
 
-### 💬 5. AI Clinical Assistant & Grounded Q&A
-<!-- ADD YOUR CHAT / RAG Q&A SCREENSHOT HERE -->
-![AI Clinical Assistant](https://via.placeholder.com/900x500.png?text=Add+AI+Chat+and+Citations+Screenshot+Here)
-*Grounded question-answering powered by Gemini 1.5 Flash with source citations and verified confidence scores.*
+### ⏳ 5. Longitudinal Medical History Timeline & Profile
+<p float="left">
+  <img src="./docs/images/medical_history_timeline.png" width="48%" alt="Medical History Timeline" />
+  <img src="./docs/images/patient_profile.png" width="48%" alt="Patient Profile" />
+</p>
+*Chronological event stream tracking all past visits, consultations, and patient profile preferences.*
 
 <br/>
 
-### 📄 6. Extracted Medical NER & Structured Lab Trends
-<!-- ADD YOUR NER / LAB VALUES SCREENSHOT HERE -->
-![Document Extraction View](https://via.placeholder.com/900x500.png?text=Add+Extracted+Lab+Trends+Screenshot+Here)
-*Real-time OCR extraction with structured lab values, reference ranges, and medication frequency breakdown.*
+### 🛡️ 6. Access History & Doctor Consent Management
+![Access History & Consent](./docs/images/access_history_consent.png)
+*Audit log giving patients granular control to review, approve, or revoke medical record access for healthcare providers.*
+
+<br/>
+
+### 💬 7. AI Health Assistant & Clinical Q&A
+<p float="left">
+  <img src="./docs/images/ai_assistant_initial.png" width="48%" alt="AI Assistant Initial Scope" />
+  <img src="./docs/images/ai_assistant_chat.png" width="48%" alt="AI Assistant Response" />
+</p>
+*Interactive clinical query engine with configurable context scope (Whole Vault vs Specific Record) and suggested follow-ups.*
 
 </div>
+
+---
+
+## 💬 Sample Grounded Conversation Flow
+
+Here is an example interaction between a patient and the **HealthVault AI Assistant** powered by **Google Gemini 1.5 Flash** and the **LangGraph Hybrid RAG Engine**:
+
+> **User:** *"What lifestyle changes or precautions are advised based on my recent records?"*
+
+```markdown
+Here is a clear summary of your recent health records in plain words:
+
+---
+
+### 🫀 Cardiology Prescription Summary
+Your doctor evaluated you for **Essential Stage 2 Hypertension** (high blood pressure) and **Mixed Hyperlipidemia** (elevated blood cholesterol levels).
+
+#### 💊 Prescribed Medications & How to Take Them
+1. **Atorvastatin 20 mg (Cholesterol Medication / Statin)**
+   • Dosage: 1 tablet once daily at bedtime.
+   • Purpose: Lowers LDL ("bad") cholesterol and protects your blood vessels and heart.
+
+2. **Amlodipine 5 mg (Blood Pressure Medication)**
+   • Dosage: 1 tablet once daily in the morning.
+   • Purpose: Relaxes blood vessels so blood flows smoothly, keeping blood pressure in a safe range.
+
+3. **Aspirin 81 mg (Cardiovascular Protection)**
+   • Dosage: 1 tablet once daily with food.
+   • Purpose: Low-dose blood thinner to prevent clot formation and maintain cardiac health.
+
+#### 💡 Practical Advice
+• Maintain a low-sodium (low salt) diet and stay well hydrated.
+• Check and log your blood pressure once or twice a week at home.
+
+---
+
+### 🩺 Gastroenterology Discharge Summary
+Your physician evaluated you for **Peptic Ulcer Disease** and **Gastroesophageal Reflux Disease (GERD)**.
+
+#### 💊 14-Day Triple Therapy Protocol
+1. **Pantoprazole 40 mg (Acid Reducer)** — 1 tablet twice daily, 30 minutes before morning & evening meals.
+2. **Amoxicillin 1000 mg (Antibiotic)** — 1 tablet twice daily with meals for 14 days.
+3. **Clarithromycin 500 mg (Antibiotic)** — 1 tablet twice daily with meals for 14 days.
+
+#### 💡 Practical Advice for Recovery
+• Finish all antibiotics: Always complete the entire 14-day course.
+• Dietary guidelines: Avoid spicy, fried, or highly acidic foods (citrus, vinegar, tomato). Avoid caffeine and alcohol.
+• Meal habits: Eat smaller, more frequent meals.
+
+---
+📑 Citations & Verified Sources: `DOC_CC822310`, `DOC_23DAFB8E`, `DOC_F0D4A673`
+💡 Suggested Follow-up Questions:
+• What is my target blood pressure range?
+• What low-sodium diet and lifestyle tips should I follow?
+• Are there any side effects with these antibiotics?
+• When should I schedule a follow-up test for H. pylori?
+```
 
 ---
 
