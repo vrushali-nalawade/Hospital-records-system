@@ -25,6 +25,12 @@ services:
         sync: false
       - key: GEMINI_MODEL
         value: gemini-1.5-flash
+      - key: SUPABASE_URL
+        value: https://ogbjzxwokuhcbqbeuqcm.supabase.co
+      - key: SUPABASE_STORAGE_BUCKET
+        value: healthvault-medical-documents
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
 
   - type: web
     name: healthvault-frontend
